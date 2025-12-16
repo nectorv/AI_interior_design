@@ -1,0 +1,169 @@
+"""Flask API routes for the interior designer application."""
+import logging
+from flask import Blueprint, current_app, request, jsonify, render_template
+
+from backend.services.image_service import crop_image_from_data_uri
+from backend.utils.image_utils import process_image_for_frontend, decode_frontend_image
+from backend.core.prompts import get_design_prompt, get_refine_prompt
+
+logger = logging.getLogger(__name__)
+
+# Create Blueprint
+api_bp = Blueprint('api', __name__)
+
+
+def _get_services():
+    """Retrieve shared service instances from the Flask app."""
+    ai_service = current_app.extensions.get('ai_service')
+    search_service = current_app.extensions.get('search_service')
+    if not ai_service or not search_service:
+        raise RuntimeError("Services not initialized on the application")
+    return ai_service, search_service
+
+
+@api_bp.route('/')
+def index():
+    """Render the main application page."""
+    return render_template('index.html', default_style="Nordic", default_room="Living Room")
+
+
+@api_bp.route('/api/redesign', methods=['POST'])
+def redesign_image():
+    """Endpoint for redesigning a room image.
+    
+    Expects:
+        - file: Image file in request.files
+        - style: Design style (form data)
+        - room_type: Type of room (form data)
+    
+    Returns:
+        JSON with original_image, empty_image, and final_image (data URIs)
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if file.mimetype not in ('image/jpeg', 'image/png'):
+        return jsonify({'error': 'Unsupported file type'}), 400
+
+    style = (request.form.get('style') or 'Nordic').strip()
+    room_type = (request.form.get('room_type') or 'Living Room').strip()
+
+    original_bytes = file.read()
+    if not original_bytes:
+        return jsonify({'error': 'Empty file'}), 400
+
+    ai_service, _ = _get_services()
+
+    try:
+        design_prompt = get_design_prompt(style, room_type)
+        final_bytes = ai_service.generate_image(original_bytes, design_prompt)
+    except Exception:
+        logger.exception("Failed to generate design")
+        return jsonify({'error': 'Failed to design room'}), 500
+
+    if not final_bytes:
+        return jsonify({'error': 'Failed to design room'}), 500
+
+    return jsonify({
+        'original_image': process_image_for_frontend(original_bytes),
+        'empty_image': process_image_for_frontend(original_bytes),  # Reserved for future feature
+        'final_image': process_image_for_frontend(final_bytes)
+    })
+
+
+@api_bp.route('/api/refine', methods=['POST'])
+def refine_image():
+    """Endpoint for refining an existing design.
+    
+    Expects JSON:
+        - image_data: Base64 data URI of the image
+        - prompt: Refinement instruction
+    
+    Returns:
+        JSON with refined_image (data URI)
+    """
+    data = request.get_json(silent=True) or {}
+    image_data = data.get('image_data')
+    prompt_text = (data.get('prompt') or '').strip()
+
+    if not image_data:
+        return jsonify({'error': 'Missing image data'}), 400
+
+    if not prompt_text:
+        return jsonify({'error': 'Missing prompt'}), 400
+
+    input_bytes = decode_frontend_image(image_data)
+    if not input_bytes:
+        return jsonify({'error': 'Invalid image'}), 400
+
+    ai_service, _ = _get_services()
+
+    try:
+        prompt = get_refine_prompt(prompt_text)
+        refined_bytes = ai_service.generate_image(input_bytes, prompt)
+    except Exception:
+        logger.exception("Failed to refine design")
+        return jsonify({'error': 'Failed to refine'}), 500
+
+    if not refined_bytes:
+        return jsonify({'error': 'Failed to refine'}), 500
+
+    return jsonify({
+        'refined_image': process_image_for_frontend(refined_bytes)
+    })
+
+
+@api_bp.route('/api/search-furniture', methods=['POST'])
+def search_furniture():
+    """Endpoint for searching furniture based on image crop.
+    
+    Expects JSON:
+        - image_data: Base64 data URI of the full image
+        - box: Dictionary with x, y, width, height for crop region
+    
+    Returns:
+        JSON with results array containing matching furniture items
+    """
+    data = request.get_json(silent=True) or {}
+
+    image_data = data.get('image_data')  # Base64 string of the generated image
+    crop_box = data.get('box')  # {x, y, width, height}
+
+    if not image_data or not crop_box:
+        return jsonify({'error': 'Missing data'}), 400
+
+    required_keys = {'x', 'y', 'width', 'height'}
+    if not required_keys.issubset(crop_box):
+        return jsonify({'error': 'Invalid crop box'}), 400
+
+    try:
+        # Normalize and validate crop values
+        parsed_box = {
+            'x': float(crop_box['x']),
+            'y': float(crop_box['y']),
+            'width': float(crop_box['width']),
+            'height': float(crop_box['height'])
+        }
+        if parsed_box['width'] <= 0 or parsed_box['height'] <= 0:
+            return jsonify({'error': 'Crop dimensions must be positive'}), 400
+
+        # Crop the image based on user selection
+        cropped_img = crop_image_from_data_uri(image_data, parsed_box)
+
+        if not cropped_img:
+            return jsonify({'error': 'Failed to process image'}), 400
+
+        # Search for similar furniture
+        _, search_service = _get_services()
+        results = search_service.search(cropped_img, top_k=4)
+
+        return jsonify({'results': results})
+
+    except Exception:
+        logger.exception("Search error")
+        return jsonify({'error': 'Failed to search furniture'}), 500
+

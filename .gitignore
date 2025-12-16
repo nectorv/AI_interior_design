@@ -1,0 +1,6 @@
+google_dataset/product_images
+code_context.txt
+pack_context.py
+.venv
+.env
+__pycache__

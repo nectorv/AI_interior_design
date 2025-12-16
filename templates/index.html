@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interior Studio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>AI Studio 🛋️</h1>
+            </div>
+
+            <div class="sidebar-content">
+                <div id="drop-area">
+                    <div class="upload-icon">📷</div>
+                    <p>Click or Drag Photo</p>
+                    <input type="file" id="file-input" accept="image/*" hidden>
+                </div>
+
+                <div class="control-group">
+                    <label>Room Type</label>
+                    <div class="select-wrapper">
+                        <select id="room-type">
+                            <option value="Living Room">Living Room</option>
+                            <option value="Bedroom">Bedroom</option>
+                            <option value="Kitchen">Kitchen</option>
+                            <option value="Office">Office</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Choose a Style</label>
+                    <div class="style-grid">
+                        <div class="style-card" data-style="Bohemian">
+                            <img src="{{ url_for('static', filename='assets/bohemian.jpg') }}" alt="Bohemian">
+                            <span>Bohemian</span>
+                        </div>
+                        <div class="style-card" data-style="Coastal">
+                            <img src="{{ url_for('static', filename='assets/coastal.jpg') }}" alt="Coastal">
+                            <span>Coastal</span>
+                        </div>
+                        <div class="style-card" data-style="Industrial">
+                            <img src="{{ url_for('static', filename='assets/industrial.jpg') }}" alt="Industrial">
+                            <span>Industrial</span>
+                        </div>
+                        <div class="style-card" data-style="Mid-Century Modern">
+                            <img src="{{ url_for('static', filename='assets/mid-century-modern.jpg') }}" alt="Mid Century">
+                            <span>Mid-Century</span>
+                        </div>
+                        <div class="style-card" data-style="Modern">
+                            <img src="{{ url_for('static', filename='assets/modern.jpg') }}" alt="Modern">
+                            <span>Modern</span>
+                        </div>
+                        <div class="style-card active" data-style="Nordic">
+                            <img src="{{ url_for('static', filename='assets/nordic.jpg') }}" alt="Nordic">
+                            <span>Nordic</span>
+                        </div>
+                        <div class="style-card add-new-style" id="add-style-btn">
+                            <div class="plus-icon">+</div>
+                            <span>Custom</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="style-input" value="Nordic">
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="process-button" disabled>
+                    ✨ Generate Magic
+                </button>
+            </div>
+        </aside>
+
+        <main class="visualizer">
+
+            <div id="search-results-panel" class="hidden">
+                <div class="panel-header">
+                    <h3>Matches Found</h3>
+                    <button id="close-results">×</button>
+                </div>
+                <div id="results-grid"></div>
+            </div>
+            
+            <div id="initial-view" class="empty-state">
+                <div class="empty-content">
+                    <div class="hero-icon">🎨</div>
+                    <h2>Design Your Dream Room</h2>
+                    <p>Upload a photo from the sidebar to get started.</p>
+                </div>
+            </div>
+
+            <div id="result-view" class="hidden">
+                <div class="view-tabs">
+                    <button class="tab active" data-view="original">Original vs New</button>
+                    <button class="tab" data-view="empty">Empty vs New</button>
+                </div>
+
+                <div class="toolbar">
+                    <div class="view-tabs">
+                        <button class="tab active" data-view="original">Original vs New</button>
+                        <button class="tab" data-view="empty">Empty vs New</button>
+                    </div>
+                    <button id="toggle-search-btn" class="tool-btn">🔎 Find Furniture</button>
+                </div>
+
+                <div class="comparison-container" id="comparison-box">
+                    <img id="base-image" src="" alt="Base Layer">
+                    <div class="img-overlay" id="overlay">
+                        <img id="final-image" src="" alt="Final Design">
+                    </div>
+                    <div class="slider-handle" id="slider">⇄</div>
+
+                    <div id="selection-layer" class="hidden">
+                        <div id="selection-box"></div>
+                    </div>
+                </div>
+
+                <div id="refine-section" class="refine-controls">
+                    <h3>🎨 Make Custom Tweaks</h3>
+                    <div class="input-group">
+                        <input type="text" id="refine-prompt" placeholder="e.g., 'Make the rug blue'">
+                        <button id="refine-button">Apply</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading-msg" class="hidden">
+                <div class="spinner"></div>
+                <p id="loading-text">Analyzing room geometry...</p>
+            </div>
+
+        </main>
+    </div>
+
+    <img id="store-original" class="hidden">
+    <img id="store-empty" class="hidden">
+
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

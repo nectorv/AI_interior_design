@@ -1,0 +1,38 @@
+/* static/js/modules/api.js */
+
+export async function redesignImage(file, style, roomType) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('style', style);
+    formData.append('room_type', roomType);
+
+    const response = await fetch('/api/redesign', { method: 'POST', body: formData });
+    return handleResponse(response);
+}
+
+export async function refineImage(imageData, prompt) {
+    const response = await fetch('/api/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_data: imageData, prompt: prompt })
+    });
+    return handleResponse(response);
+}
+
+export async function searchFurniture(imageData, box) {
+    const response = await fetch('/api/search-furniture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_data: imageData, box: box })
+    });
+    return handleResponse(response);
+}
+
+// Helper to check for errors uniformly
+async function handleResponse(response) {
+    const data = await response.json();
+    if (!response.ok || data.error) {
+        throw new Error(data.error || `Request failed: ${response.status}`);
+    }
+    return data;
+}

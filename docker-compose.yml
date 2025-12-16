@@ -1,0 +1,19 @@
+services:
+  web:
+    build: .
+    container_name: ai-interior-designer-web
+    command: python run.py
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount dataset read-only so the image stays small but app can access data
+      - ./google_dataset:/app/google_dataset:ro
+      # Mount backend and templates for hot-reload style development
+      - ./backend:/app/backend
+      - ./templates:/app/templates
+      # Optionally mount .env if you use it for secrets/config
+      # (uncomment if desired)
+      # - ./.env:/app/.env:ro
