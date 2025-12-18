@@ -1,10 +1,13 @@
 """Flask application factory."""
+import logging
 import os
 from flask import Flask
 from backend.core.config import Config
 from backend.api.routes import api_bp
 from backend.services.ai_service import GeminiService
 from backend.services.search_service import FurnitureSearcher
+
+logger = logging.getLogger(__name__)
 
 
 def create_app():
@@ -24,8 +27,21 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = Config.MAX_CONTENT_LENGTH
 
     # Initialize shared services once and store on the app
+    logger.info("Initializing AI service...")
     app.extensions['ai_service'] = GeminiService()
-    app.extensions['search_service'] = FurnitureSearcher()
+    
+    logger.info("Initializing search service...")
+    search_service = FurnitureSearcher()
+    app.extensions['search_service'] = search_service
+    
+    # Validate search service initialization
+    if search_service.df_data is None:
+        logger.error("WARNING: Search service failed to initialize. Furniture search will not work.")
+        logger.error("Please ensure the following files exist:")
+        logger.error("  - %s", Config.CSV_FILE)
+        logger.error("  - %s", Config.EMBEDDINGS_FILE)
+    else:
+        logger.info("All services initialized successfully.")
 
     # Register blueprints
     app.register_blueprint(api_bp)

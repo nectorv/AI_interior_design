@@ -19,7 +19,7 @@ venv/
 *.env
 
 # Heavy datasets and temp files (do NOT bake into image)
-google_dataset/
+# Note: google_dataset/ is needed for furniture search functionality
 temp/
 
 # Docker

@@ -1,5 +1,6 @@
 """Furniture search service using CLIP model."""
 import logging
+import os
 import torch
 import numpy as np
 import pandas as pd
@@ -17,15 +18,30 @@ class FurnitureSearcher:
         """Initialize the search service with CLIP model and dataset."""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info("Loading Search Engine on %s...", self.device)
+        
+        # Check if required files exist
+        if not os.path.exists(Config.CSV_FILE):
+            logger.error("CSV file not found: %s", Config.CSV_FILE)
+            self.df_data = None
+            return
+            
+        if not os.path.exists(Config.EMBEDDINGS_FILE):
+            logger.error("Embeddings file not found: %s", Config.EMBEDDINGS_FILE)
+            self.df_data = None
+            return
+        
         try:
             # 1. Load Metadata (CSV)
+            logger.info("Loading CSV data from: %s", Config.CSV_FILE)
             self.df_data = pd.read_csv(Config.CSV_FILE)
             self.df_data['clean_id'] = self.df_data['clean_id'].astype(str)
             
             # Create a lookup dictionary for fast access by ID
             self.product_lookup = self.df_data.set_index('clean_id').to_dict('index')
+            logger.info("Loaded %d products from CSV", len(self.df_data))
 
             # 2. Load Embeddings (PKL) - Expecting a DataFrame
+            logger.info("Loading embeddings from: %s", Config.EMBEDDINGS_FILE)
             self.df_embeddings = pd.read_pickle(Config.EMBEDDINGS_FILE)
             
             # Ensure the ID column is string (just like the CSV)
@@ -38,15 +54,20 @@ class FurnitureSearcher:
             
             # Convert to Tensor
             self.dataset_tensor = torch.from_numpy(raw_embeddings).float().to(self.device)
+            logger.info("Created embedding tensor with shape: %s", self.dataset_tensor.shape)
             
             # 4. Load Model
+            logger.info("Loading CLIP model: %s", Config.MODEL_ID)
             self.model = CLIPModel.from_pretrained(Config.MODEL_ID).to(self.device)
             self.processor = CLIPProcessor.from_pretrained(Config.MODEL_ID)
-            logger.info("Search Engine Loaded.")
+            logger.info("Search Engine Loaded successfully.")
             
-        except Exception:
-            logger.exception("CRITICAL ERROR loading search database.")
+        except Exception as e:
+            logger.exception("CRITICAL ERROR loading search database: %s", str(e))
             self.df_data = None
+            self.df_embeddings = None
+            self.model = None
+            self.processor = None
 
     def search(self, query_image, top_k=5):
         """Search for similar furniture items.
@@ -58,7 +79,8 @@ class FurnitureSearcher:
         Returns:
             List of dictionaries containing product information
         """
-        if self.df_data is None:
+        if self.df_data is None or self.model is None:
+            logger.warning("Search service not properly initialized. Cannot perform search.")
             return []
 
         # 1. Process Image
