@@ -1,0 +1,674 @@
+================================================================================
+AI INTERIOR DESIGNER - PROJECT CONTEXT DOCUMENT
+================================================================================
+
+PURPOSE:
+This document provides a comprehensive description of the AI Interior Designer
+project for use as context in AI-assisted development and consulting tools.
+
+================================================================================
+PROJECT OVERVIEW
+================================================================================
+
+The AI Interior Designer is a professional web application that leverages
+artificial intelligence to help users redesign interior spaces. The application
+combines AI-powered image generation with intelligent furniture search
+capabilities, enabling users to visualize room redesigns in various styles and
+find matching furniture items.
+
+Core Capabilities:
+- Upload a room photo and redesign it in various interior design styles
+- Select from predefined styles (Bohemian, Coastal, Industrial, Mid-Century
+  Modern, Modern, Nordic) or use custom styles
+- Choose room types (Living Room, Bedroom, Kitchen, Office)
+- Refine generated designs with custom text prompts
+- Search for real furniture items similar to generated designs using visual
+  similarity search
+- Interactive before/after comparison with slider functionality
+- Crop regions from generated designs to find matching furniture
+
+================================================================================
+TECHNOLOGY STACK
+================================================================================
+
+Backend:
+- Python 3.10
+- Flask (web framework)
+- Google Gemini API (gemini-2.5-flash-image model) for AI image generation
+- PyTorch for deep learning operations
+- Hugging Face Transformers (CLIP model: openai/clip-vit-base-patch32) for
+  visual similarity search
+- Pillow (PIL) for image processing
+- Pandas for data manipulation
+- NumPy for numerical operations
+- python-dotenv for environment variable management
+
+Frontend:
+- Vanilla JavaScript (ES6 modules)
+- HTML5
+- CSS3 (custom styling)
+- Google Fonts (Inter font family)
+
+Infrastructure:
+- Docker support with Dockerfile and docker-compose.yml
+- Python virtual environment recommended
+
+Data Storage:
+- CSV file containing furniture product metadata (google_dataset/interior_design_dataset.csv)
+- Pickle file containing pre-computed image embeddings (google_dataset/embeddings.pkl)
+
+================================================================================
+PROJECT ARCHITECTURE
+================================================================================
+
+The project follows a layered architecture pattern with clear separation of
+concerns:
+
+LAYER 1: API LAYER (backend/api/)
+- Purpose: HTTP request/response handling
+- Files:
+  * routes.py: All Flask route handlers and endpoints
+- Responsibilities:
+  * Request validation
+  * Response formatting
+  * Error handling
+  * Delegating business logic to services
+
+LAYER 2: SERVICE LAYER (backend/services/)
+- Purpose: Business logic implementation
+- Files:
+  * ai_service.py: GeminiService - interfaces with Google Gemini API for
+    image generation
+  * search_service.py: FurnitureSearcher - implements CLIP-based visual
+    similarity search
+  * image_service.py: Image processing utilities (cropping, transformation)
+- Responsibilities:
+  * Core application logic
+  * External API integration
+  * Data processing
+
+LAYER 3: CORE LAYER (backend/core/)
+- Purpose: Domain logic and configuration
+- Files:
+  * config.py: Application configuration (API keys, file paths, model settings)
+  * prompts.py: Prompt templates for AI image generation
+- Responsibilities:
+  * Configuration management
+  * Prompt engineering
+  * Domain-specific constants
+
+LAYER 4: UTILS LAYER (backend/utils/)
+- Purpose: Reusable utility functions
+- Files:
+  * image_utils.py: Image encoding/decoding (base64, data URI conversion)
+- Responsibilities:
+  * Cross-cutting utility functions
+  * Format conversions
+
+FRONTEND STRUCTURE (static/)
+- js/main.js: Application entry point, orchestrates all modules
+- js/modules/api.js: API communication layer (HTTP requests)
+- js/modules/ui.js: UI manipulation and rendering
+- js/modules/editor.js: Image editing logic (slider, crop selection)
+- js/modules/parallax.js: (Additional UI effects if present)
+- css/style.css: Application styling
+- assets/: Images, fonts, and other static resources
+
+TEMPLATES (templates/)
+- index.html: Main application page with sidebar controls and visualization area
+
+================================================================================
+KEY FEATURES & USER WORKFLOW
+================================================================================
+
+1. IMAGE UPLOAD & SELECTION
+   - Users can click or drag-and-drop room photos
+   - Supports JPEG and PNG formats
+   - Preview displayed in upload area
+
+2. ROOM TYPE SELECTION
+   - Dropdown menu: Living Room, Bedroom, Kitchen, Office
+   - Affects the design prompt sent to AI
+
+3. STYLE SELECTION
+   - Visual style cards: Bohemian, Coastal, Industrial, Mid-Century Modern,
+     Modern, Nordic
+   - Custom style option (text input)
+   - Active style highlighted visually
+
+4. DESIGN GENERATION
+   - User uploads image, selects room type and style
+   - Clicks "Generate Magic" button
+   - Application sends request to /api/redesign endpoint
+   - Backend:
+     a. Validates image file
+     b. Constructs design prompt using style and room type
+     c. Calls Gemini API with original image and prompt
+     d. Returns generated design image
+   - Frontend displays:
+     * Original vs New comparison with interactive slider
+     * Empty vs New comparison (currently shows original as placeholder)
+
+5. DESIGN REFINEMENT
+   - User can enter custom text prompts (e.g., "Make the rug blue")
+   - Sends request to /api/refine endpoint
+   - Backend applies refinement prompt to existing design
+   - Returns refined image
+
+6. FURNITURE SEARCH
+   - User can activate "Find Furniture" mode
+   - Draws selection box on generated design image
+   - Crops selected region
+   - Sends cropped image to /api/search-furniture endpoint
+   - Backend:
+     a. Processes crop coordinates
+     b. Extracts image region
+     c. Generates embedding using CLIP model
+     d. Computes similarity scores against furniture database
+     e. Returns top-k matching products
+   - Frontend displays search results panel with:
+     * Product images
+     * Titles
+     * Prices
+     * Source links
+     * Similarity scores
+
+================================================================================
+API ENDPOINTS
+================================================================================
+
+GET /
+- Purpose: Render main application page
+- Response: HTML page (index.html)
+- Parameters: None
+
+POST /api/redesign
+- Purpose: Generate a new interior design based on uploaded image
+- Request:
+  * Form data:
+    - file: Image file (JPEG/PNG)
+    - style: Design style string
+    - room_type: Room type string
+- Response: JSON
+  {
+    "original_image": "data:image/png;base64,...",
+    "empty_image": "data:image/png;base64,...",
+    "final_image": "data:image/png;base64,..."
+  }
+- Error Responses: 400 (validation error), 500 (generation failed)
+
+POST /api/refine
+- Purpose: Refine an existing design based on text prompt
+- Request: JSON
+  {
+    "image_data": "data:image/png;base64,...",
+    "prompt": "user refinement instruction"
+  }
+- Response: JSON
+  {
+    "refined_image": "data:image/png;base64,..."
+  }
+- Error Responses: 400 (validation error), 500 (refinement failed)
+
+POST /api/search-furniture
+- Purpose: Search for furniture items similar to cropped image region
+- Request: JSON
+  {
+    "image_data": "data:image/png;base64,...",
+    "box": {
+      "x": float,
+      "y": float,
+      "width": float,
+      "height": float
+    }
+  }
+- Response: JSON
+  {
+    "results": [
+      {
+        "score": float,
+        "title": string,
+        "price": string,
+        "source": string,
+        "image_url": string,
+        "search_query": string
+      },
+      ...
+    ]
+  }
+- Error Responses: 400 (validation error), 500 (search failed)
+
+================================================================================
+CONFIGURATION & ENVIRONMENT
+================================================================================
+
+Required Environment Variables:
+- GOOGLE_API_KEY: Google Gemini API key (required)
+
+Configuration File: backend/core/config.py
+
+Key Configuration Values:
+- MAX_CONTENT_LENGTH: 16MB (maximum upload size)
+- GEMINI_MODEL: "gemini-2.5-flash-image"
+- MODEL_ID: "openai/clip-vit-base-patch32"
+- CSV_FILE: Path to furniture dataset CSV
+- EMBEDDINGS_FILE: Path to pre-computed embeddings pickle file
+
+Required Files:
+- google_dataset/interior_design_dataset.csv: Furniture product metadata
+- google_dataset/embeddings.pkl: Pre-computed CLIP embeddings for furniture
+  images
+
+Directory Structure:
+- google_dataset/: Dataset files (CSV, embeddings) - mounted read-only in Docker
+- outputs/: Generated output files
+- temp/: Temporary files during processing
+- tests/: Test suite (currently minimal)
+
+================================================================================
+APPLICATION FLOW & COMPONENT INTERACTIONS
+================================================================================
+
+Application Initialization (backend/app.py):
+1. create_app() function creates Flask application instance
+2. Initializes services and stores in app.extensions:
+   - GeminiService: Connects to Google Gemini API
+   - FurnitureSearcher: Loads CLIP model and furniture database
+3. Registers API blueprint (routes)
+4. Configures static files and templates paths
+
+Service Initialization:
+- GeminiService: Validates API key, creates genai client
+- FurnitureSearcher: 
+  a. Loads CSV metadata into pandas DataFrame
+  b. Creates product lookup dictionary
+  c. Loads pre-computed embeddings from pickle file
+  d. Converts embeddings to PyTorch tensor (GPU if available)
+  e. Loads CLIP model and processor from Hugging Face
+
+Frontend Initialization (static/js/main.js):
+1. DOMContentLoaded event triggers
+2. Gathers DOM element references
+3. Initializes Editor module (slider, drawing functionality)
+4. Sets up event listeners:
+   - File upload
+   - Style selection
+   - Process button
+   - Refinement
+   - Furniture search toggle
+
+Request Flow Example (Design Generation):
+1. User clicks "Generate Magic" button
+2. Frontend: API.redesignImage() sends FormData with file, style, room_type
+3. Backend: routes.py redesign_image() validates request
+4. Backend: Constructs prompt using prompts.get_design_prompt()
+5. Backend: ai_service.generate_image() calls Gemini API
+6. Gemini API: Processes image + prompt, returns generated image bytes
+7. Backend: Converts image bytes to base64 data URI
+8. Backend: Returns JSON response
+9. Frontend: Displays images in comparison view, initializes slider
+
+Search Flow Example:
+1. User draws selection box on generated image
+2. Frontend: Editor module captures crop coordinates
+3. Frontend: API.searchFurniture() sends image data URI + box coordinates
+4. Backend: routes.py search_furniture() validates crop box
+5. Backend: image_service.crop_image_from_data_uri() extracts region
+6. Backend: search_service.search() generates CLIP embedding
+7. Backend: Computes cosine similarity against database embeddings
+8. Backend: Retrieves top-k products from metadata
+9. Backend: Returns results with scores, titles, prices, URLs
+10. Frontend: ui.renderSearchResults() displays product cards
+
+================================================================================
+PROMPT ENGINEERING
+================================================================================
+
+The application uses structured prompts for different operations:
+
+Design Prompt (prompts.get_design_prompt()):
+- Format: "Furnish this empty room as a {style} {room_type}. Keep the exact
+  architecture, size, window positions, lighting, and perspective unchanged.
+  Add furniture, rugs, and decor matching the style. Photorealistic."
+- Purpose: Generate complete room design from empty room or original photo
+
+Refinement Prompt (prompts.get_refine_prompt()):
+- Format: "Based on this image, apply the following change: {instruction}.
+  Maintain the exact perspective, lighting, architecture, and all other
+  furniture/decor that is not being changed. Photorealistic."
+- Purpose: Apply specific changes to existing design
+
+Empty Room Prompt (prompts.get_empty_room_prompt()):
+- Format: "Remove all furniture, people, and objects from this room. Show the
+  room completely empty with bare walls and flooring. Keep the exact
+  architecture, size, window positions, lighting, and perspective unchanged.
+  Photorealistic."
+- Purpose: Extract empty room (currently reserved for future feature)
+
+Key Prompt Principles:
+- Maintain architectural consistency (perspective, lighting, structure)
+- Style-specific furniture and decor
+- Photorealistic output
+- Room type appropriate furnishings
+
+================================================================================
+DATABASE & DATA STRUCTURE
+================================================================================
+
+Furniture Dataset:
+- Format: CSV file (interior_design_dataset.csv)
+- Key Columns:
+  * clean_id: Unique product identifier (string)
+  * title: Product name
+  * price: Product price
+  * source: Vendor/source URL
+  * image_url: Product image URL
+  * Additional metadata fields
+
+Embeddings:
+- Format: Pickle file (pandas DataFrame)
+- Structure:
+  * clean_id: Product identifier (matches CSV)
+  * embedding: NumPy array (CLIP embedding vector, typically 512 dimensions)
+- Usage: Pre-computed for performance (computed once, reused for all searches)
+
+Search Process:
+1. User provides query image (cropped region)
+2. CLIP model generates embedding for query image
+3. Embedding normalized (L2 normalization)
+4. Matrix multiplication with dataset embeddings (cosine similarity)
+5. Top-k indices retrieved
+6. Metadata looked up by clean_id from embedding DataFrame
+7. Results sorted by similarity score
+
+================================================================================
+DEPLOYMENT & RUNNING
+================================================================================
+
+Local Development:
+1. Install dependencies: pip install -r requirements.txt
+2. Create .env file with GOOGLE_API_KEY
+3. Ensure google_dataset/ contains CSV and embeddings.pkl
+4. Run: python run.py (or python app.py for legacy)
+5. Access: http://localhost:5000
+
+Docker Deployment:
+1. Build: docker build -t ai-interior-designer .
+2. Run: docker-compose up
+3. Volume mounts:
+   - google_dataset/: Read-only dataset access
+   - backend/: Hot-reload development (optional)
+   - templates/: Hot-reload development (optional)
+
+Entry Points:
+- run.py: Recommended entry point (calls backend.app.create_app())
+- app.py: Legacy entry point (backward compatibility)
+- backend/app.py: Module entry point (can run as: python -m backend.app)
+
+Production Considerations:
+- Set FLASK_ENV=production
+- Disable debug mode
+- Configure proper logging
+- Set up reverse proxy (nginx) for production
+- Consider GPU availability for CLIP model (CUDA)
+- Dataset files should be accessible to container
+
+================================================================================
+KNOWN ISSUES & AREAS FOR IMPROVEMENT
+================================================================================
+
+(From CODE_REVIEW.md - comprehensive code review document)
+
+Critical Issues:
+1. XSS Vulnerability: Product titles in search results inserted directly into
+   HTML without sanitization (static/js/modules/ui.js)
+2. Global Variables: Use of module-level globals instead of dependency
+   injection (resolved in current version using app.extensions)
+3. Error Handling: Use of print() instead of proper logging throughout codebase
+
+High Priority:
+1. Logging: Replace all print() statements with logging module
+2. Input Validation: Add validation for user inputs and API responses
+3. Memory Leaks: Event listeners on window not removed in editor.js
+4. Error Handlers: Missing onerror handlers for image loading
+
+Medium Priority:
+1. UX: Replace alert() and prompt() with modern UI components
+2. Code Organization: Some inconsistencies in object structure
+3. Hardcoded Values: MIME types, asset paths
+4. File Validation: Missing existence checks for dataset files
+
+Specific Technical Issues:
+- Redundant return None statement in ai_service.py
+- Missing IndexError check for API response.candidates
+- Hardcoded PNG MIME type in image_utils (should detect format)
+- Duplicate tab HTML in index.html
+- Race condition risk in image onload handlers
+
+Testing:
+- Tests directory exists but currently minimal
+- No comprehensive test suite
+- Services not yet tested independently
+
+================================================================================
+EXTENSIBILITY & FUTURE ENHANCEMENTS
+================================================================================
+
+Potential Features:
+1. Empty Room Generation: Currently placeholder - could implement actual
+   furniture removal
+2. Style Customization: Enhanced custom style creation
+3. History/Save: Save generated designs, design history
+4. User Accounts: Multi-user support, saved designs per user
+5. Furniture Purchase Integration: Direct links to purchase furniture
+6. Multiple Room Types: Expand room type options
+7. 3D View: Three-dimensional visualization
+8. Batch Processing: Process multiple rooms simultaneously
+9. Style Learning: Learn from user preferences
+
+Architecture Extensibility:
+- Modular service layer allows easy addition of new AI services
+- Prompt system easily extended with new prompt templates
+- API routes follow RESTful patterns, easy to add endpoints
+- Frontend modules allow feature addition without major refactoring
+
+Integration Points:
+- Additional AI models (OpenAI DALL-E, Stable Diffusion)
+- E-commerce APIs for furniture purchasing
+- User authentication systems
+- Cloud storage for generated images
+- Analytics and usage tracking
+
+================================================================================
+DEVELOPMENT WORKFLOW
+================================================================================
+
+Adding New Features:
+
+1. New API Endpoint:
+   - Add route handler to backend/api/routes.py
+   - Validate inputs
+   - Call appropriate service
+   - Return formatted JSON response
+
+2. New Service:
+   - Create file in backend/services/
+   - Implement business logic
+   - Add initialization in backend/app.py create_app()
+   - Store in app.extensions for access
+
+3. New Frontend Feature:
+   - Add UI elements to templates/index.html
+   - Add logic to static/js/modules/ (api.js, ui.js, editor.js, or new module)
+   - Wire up in static/js/main.js
+   - Style in static/css/style.css
+
+4. Configuration Changes:
+   - Update backend/core/config.py
+   - Add environment variables if needed
+   - Document in README.md
+
+5. New Prompt Template:
+   - Add function to backend/core/prompts.py
+   - Follow existing prompt structure
+   - Test with various inputs
+
+Testing Approach:
+- Unit tests: Test services independently
+- Integration tests: Test API endpoints with mock services
+- Frontend tests: Test user interactions (if test framework added)
+
+Code Style:
+- Python: PEP 8 conventions
+- JavaScript: ES6 modules, modern syntax
+- Separation of concerns: Clear layer boundaries
+- Documentation: Docstrings for functions and classes
+
+================================================================================
+DEPENDENCIES SUMMARY
+================================================================================
+
+Python Packages (requirements.txt):
+- google-genai: Google Gemini API client
+- Pillow: Image processing
+- python-dotenv: Environment variable management
+- Flask: Web framework
+- torch: PyTorch for deep learning
+- numpy: Numerical operations
+- transformers: Hugging Face transformers (CLIP model)
+- pandas: Data manipulation
+
+External Services:
+- Google Gemini API: Image generation (requires API key)
+- Hugging Face Model Hub: CLIP model download (automatic via transformers)
+
+Data Requirements:
+- Pre-computed furniture embeddings (must be generated separately or provided)
+- Furniture dataset CSV with product metadata
+
+System Requirements:
+- Python 3.10+
+- CUDA-capable GPU (optional, recommended for faster CLIP inference)
+- Minimum 4GB RAM (more recommended for CLIP model)
+- Disk space for dataset files
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+Current Security Measures:
+- File type validation (JPEG/PNG only)
+- File size limits (16MB max)
+- Input validation on API endpoints
+- CORS handled by Flask defaults
+
+Security Concerns:
+1. XSS Vulnerability: Unsanitized HTML insertion in search results
+2. API Key Management: Should use secure secret management in production
+3. File Upload: No virus scanning (rely on file type validation)
+4. Rate Limiting: No rate limiting implemented
+5. Input Sanitization: Limited sanitization of user inputs
+
+Recommendations:
+- Implement HTML sanitization for all user-generated content
+- Add rate limiting (Flask-Limiter)
+- Implement CSRF protection
+- Use environment variables securely (never commit .env)
+- Add request logging and monitoring
+- Implement API key rotation strategy
+
+================================================================================
+PERFORMANCE CONSIDERATIONS
+================================================================================
+
+Optimization Points:
+1. CLIP Model Loading: Model loaded once at startup (efficient)
+2. Embeddings: Pre-computed (avoids recomputation)
+3. GPU Acceleration: Automatic if CUDA available
+4. Image Processing: Pillow optimized for common operations
+
+Bottlenecks:
+1. Gemini API: Network latency for image generation (external service)
+2. CLIP Inference: GPU recommended for fast similarity search
+3. Large Image Files: Processing time increases with image size
+4. Memory: CLIP model and embeddings loaded in memory
+
+Optimization Opportunities:
+- Cache generated designs
+- Batch embedding computation
+- Image compression before processing
+- Lazy loading of CLIP model (if memory constrained)
+- CDN for static assets
+
+================================================================================
+PROJECT STATUS & MAINTENANCE
+================================================================================
+
+Current State:
+- Functional application with core features working
+- Production-ready structure but needs security hardening
+- Code review completed (CODE_REVIEW.md available)
+- Docker support implemented
+- Basic error handling in place
+
+Maintenance Needs:
+1. Address critical security issues (XSS vulnerability)
+2. Implement proper logging system
+3. Add comprehensive test suite
+4. Improve error handling and user feedback
+5. Code cleanup (remove redundant code, fix issues from code review)
+
+Version Control:
+- Git repository structure in place
+- Standard .gitignore patterns recommended
+- Code review document tracks known issues
+
+Documentation:
+- README.md: Setup and usage instructions
+- CODE_REVIEW.md: Detailed code quality analysis
+- This context.txt: Comprehensive project description
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Key Files:
+- Entry: run.py
+- App Factory: backend/app.py
+- Routes: backend/api/routes.py
+- AI Service: backend/services/ai_service.py
+- Search Service: backend/services/search_service.py
+- Config: backend/core/config.py
+- Prompts: backend/core/prompts.py
+- Frontend Entry: static/js/main.js
+- Template: templates/index.html
+
+Key Classes:
+- GeminiService: AI image generation
+- FurnitureSearcher: Visual similarity search
+- Config: Configuration management
+
+Key Functions:
+- create_app(): Flask application factory
+- generate_image(): Generate AI design
+- search(): Find similar furniture
+- get_design_prompt(): Construct design prompt
+- get_refine_prompt(): Construct refinement prompt
+
+Common Tasks:
+- Add new style: Update index.html style cards + prompts.py
+- Add new endpoint: Add route to routes.py
+- Modify prompts: Update prompts.py functions
+- Change AI model: Update Config.GEMINI_MODEL
+- Change search model: Update Config.MODEL_ID
+
+================================================================================
+END OF CONTEXT DOCUMENT
+================================================================================
+
+This document should be updated when significant changes are made to the
+project architecture, features, or technology stack.
+
+Last Updated: Generated based on current codebase state
+Project Location: /workspaces/AI_interior_design
+
