@@ -57,6 +57,101 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Helper Functions for Comparison UI State ---
+    
+    /**
+     * Hides all comparison UI elements (Slider, Bar, Badges)
+     * Used when a new image is uploaded/selected.
+     */
+    function hideComparisonElements() {
+        // 1. Hide Slider Handle - Use multiple methods to ensure it's hidden
+        if (elements.slider) {
+            // First, add the hidden class
+            elements.slider.classList.add('hidden');
+            
+            // Then use setProperty with !important to ensure it overrides any other styles
+            // This must come AFTER adding the class to work with the CSS rule
+            elements.slider.style.setProperty('display', 'none', 'important');
+            elements.slider.style.setProperty('visibility', 'hidden', 'important');
+            elements.slider.style.setProperty('opacity', '0', 'important');
+            elements.slider.style.left = '0%';
+            elements.slider.style.pointerEvents = 'none';
+            
+            // Force a reflow to ensure styles are applied
+            void elements.slider.offsetHeight;
+        }
+
+        // 2. Hide Custom Instructions Bar
+        if (elements.customInstructionsBar) {
+            elements.customInstructionsBar.classList.add('hidden');
+        }
+
+        // 3. Hide Static Badges
+        const beforeBadge = document.querySelector('.badge-before-static');
+        const afterBadge = document.querySelector('.badge-after-static');
+        
+        if (beforeBadge) {
+            beforeBadge.classList.add('hidden');
+            beforeBadge.style.display = 'none';
+            beforeBadge.style.visibility = 'hidden';
+        }
+        if (afterBadge) {
+            afterBadge.classList.add('hidden');
+            afterBadge.style.display = 'none';
+            afterBadge.style.visibility = 'hidden';
+        }
+
+        // 4. Reset Overlay (Visual reset and hide)
+        if (elements.overlay) {
+            elements.overlay.style.width = '0%';
+            elements.overlay.style.borderRight = 'none';
+            elements.overlay.style.setProperty('display', 'none', 'important');
+        }
+    }
+
+    /**
+     * Shows all comparison UI elements
+     * Used after generation, refinement, or applying instructions is complete.
+     */
+    function showComparisonElements() {
+        // 1. Show Slider Handle - Reset all properties
+        if (elements.slider) {
+            elements.slider.classList.remove('hidden');
+            elements.slider.style.display = 'flex'; // Flex is required for centering the icon
+            elements.slider.style.visibility = 'visible';
+            elements.slider.style.opacity = '1';
+            elements.slider.style.left = '50%';
+            elements.slider.style.pointerEvents = 'auto';
+        }
+
+        // 2. Show Custom Instructions Bar
+        if (elements.customInstructionsBar) {
+            elements.customInstructionsBar.classList.remove('hidden');
+        }
+
+        // 3. Show Static Badges
+        const beforeBadge = document.querySelector('.badge-before-static');
+        const afterBadge = document.querySelector('.badge-after-static');
+
+        if (beforeBadge) {
+            beforeBadge.classList.remove('hidden');
+            beforeBadge.style.display = 'block';
+            beforeBadge.style.visibility = 'visible';
+        }
+        if (afterBadge) {
+            afterBadge.classList.remove('hidden');
+            afterBadge.style.display = 'block';
+            afterBadge.style.visibility = 'visible';
+        }
+
+        // 4. Set Overlay to Comparison Mode
+        if (elements.overlay) {
+            elements.overlay.style.display = 'block';
+            elements.overlay.style.width = '50%';
+            elements.overlay.style.borderRight = '2px solid white';
+        }
+    }
+
     // --- Event Listeners ---
 
     // 1. File Upload
@@ -106,6 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Hide initial view
             elements.initialView.classList.add('hidden');
             
+            // --- FIX: FORCE UI RESET ---
+            // CRITICAL: Hide all comparison tools BEFORE showing result view
+            // This ensures they're hidden before the DOM renders
+            hideComparisonElements();
+            
             // Display uploaded image immediately in the center
             const imageDataUrl = ev.target.result;
             elements.baseImg.src = imageDataUrl;
@@ -115,12 +215,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show result view with uploaded image
             elements.resultView.classList.remove('hidden');
             
+            // Force hide again after showing result view to ensure it stays hidden
+            // Use requestAnimationFrame to ensure DOM has updated
+            requestAnimationFrame(() => {
+                hideComparisonElements();
+            });
+            
             // Wait for image to load, then sync sizes
             elements.baseImg.onload = () => {
                 Editor.syncImageSizes(elements.baseImg, elements.finalImg);
-                // Hide overlay initially (show only the uploaded image)
-                elements.overlay.style.width = '0%';
-                elements.slider.style.left = '0%';
+                // Ensure comparison elements stay hidden after image loads
+                hideComparisonElements();
             };
             
             elements.processBtn.disabled = false;
@@ -168,11 +273,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     elements.resultView.classList.remove('hidden');
                     if (uploadBtnTrigger) uploadBtnTrigger.style.display = 'flex';
                     
-                    // Reset overlay to show comparison (50% split)
-                    elements.overlay.style.width = '50%';
-                    elements.slider.style.left = '50%';
-                    elements.overlay.style.borderRight = '2px solid white';
-                    elements.slider.style.display = 'flex';
+                    // --- REPLACEMENT: Use helper function ---
+                    // Show all comparison elements (slider, badges, custom instructions bar)
+                    showComparisonElements();
+                    
+                    // Enable custom instructions button after image is loaded
+                    if (elements.applyInstructionsBtn && elements.customInstructionsInput) {
+                        const hasText = elements.customInstructionsInput.value.trim().length > 0;
+                        elements.applyInstructionsBtn.disabled = !hasText;
+                    }
                     
                     // Sync sizes after a brief delay to ensure layout is complete
                     setTimeout(() => {
@@ -189,28 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.finalImg.onload = () => {
                 finalLoaded = true;
                 checkBothLoaded();
-                // Show static badges
-                const beforeBadge = document.querySelector('.badge-before-static');
-                const afterBadge = document.querySelector('.badge-after-static');
-                if (beforeBadge) {
-                    beforeBadge.classList.remove('hidden');
-                    beforeBadge.style.display = 'block';
-                    beforeBadge.style.visibility = 'visible';
-                }
-                if (afterBadge) {
-                    afterBadge.classList.remove('hidden');
-                    afterBadge.style.display = 'block';
-                    afterBadge.style.visibility = 'visible';
-                }
-                // Show custom instructions bar after first generation
-                if (elements.customInstructionsBar) {
-                    elements.customInstructionsBar.classList.remove('hidden');
-                }
-                // Enable custom instructions button after image is loaded
-                if (elements.applyInstructionsBtn && elements.customInstructionsInput) {
-                    const hasText = elements.customInstructionsInput.value.trim().length > 0;
-                    elements.applyInstructionsBtn.disabled = !hasText;
-                }
             };
         } catch (error) {
             alert(error.message);
@@ -233,23 +320,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.finalImg.onload = () => {
                     UI.toggleLoading(false, elements);
                     elements.resultView.classList.remove('hidden');
-                    // Show static badges
-                    const beforeBadge = document.querySelector('.badge-before-static');
-                    const afterBadge = document.querySelector('.badge-after-static');
-                    if (beforeBadge) {
-                        beforeBadge.classList.remove('hidden');
-                        beforeBadge.style.display = 'block';
-                        beforeBadge.style.visibility = 'visible';
-                    }
-                    if (afterBadge) {
-                        afterBadge.classList.remove('hidden');
-                        afterBadge.style.display = 'block';
-                        afterBadge.style.visibility = 'visible';
-                    }
-                    // Show custom instructions bar if not already visible
-                    if (elements.customInstructionsBar) {
-                        elements.customInstructionsBar.classList.remove('hidden');
-                    }
+                    
+                    // --- REPLACEMENT: Use helper function ---
+                    showComparisonElements();
+                    
                     setTimeout(() => {
                         Editor.syncImageSizes(elements.baseImg, elements.finalImg);
                     }, 100);
@@ -299,24 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.finalImg.onload = () => {
                     UI.toggleLoading(false, elements);
                     elements.resultView.classList.remove('hidden');
-                    // Show static badges
-                    const beforeBadge = document.querySelector('.badge-before-static');
-                    const afterBadge = document.querySelector('.badge-after-static');
-                    if (beforeBadge) {
-                        beforeBadge.classList.remove('hidden');
-                        beforeBadge.style.display = 'block';
-                        beforeBadge.style.visibility = 'visible';
-                    }
-                    if (afterBadge) {
-                        afterBadge.classList.remove('hidden');
-                        afterBadge.style.display = 'block';
-                        afterBadge.style.visibility = 'visible';
-                    }
-                    // Show custom instructions bar if not already visible
-                    if (elements.customInstructionsBar) {
-                        elements.customInstructionsBar.classList.remove('hidden');
-                    }
-                    updateApplyButtonState(); // Re-enable if text is still there
+                    
+                    // --- REPLACEMENT: Use helper function ---
+                    showComparisonElements();
+                    
+                    // Clear the input field after successful application
+                    elements.customInstructionsInput.value = '';
+                    updateApplyButtonState(); // This will disable the button since input is now empty
                     setTimeout(() => {
                         Editor.syncImageSizes(elements.baseImg, elements.finalImg);
                     }, 100);
@@ -331,9 +394,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elements.applyInstructionsBtn.addEventListener('click', applyCustomInstructions);
         
-        // Allow Enter key to submit (Ctrl/Cmd + Enter)
+        // Allow Enter key to submit (Shift+Enter for new line, Enter to submit)
         elements.customInstructionsInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 if (!elements.applyInstructionsBtn.disabled) {
                     applyCustomInstructions();

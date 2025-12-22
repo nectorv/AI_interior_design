@@ -70,11 +70,14 @@ export function toggleSearchMode(active, elements) {
         }
     } else {
         // Show overlay again for comparison view
-        elements.overlay.style.display = 'block';
-        elements.overlay.style.width = '50%';
-        elements.slider.style.left = '50%';
-        elements.overlay.style.borderRight = '2px solid white';
-        elements.slider.style.display = 'flex';
+        // BUT only if slider is not supposed to be hidden (check for hidden class)
+        if (!elements.slider.classList.contains('hidden')) {
+            elements.overlay.style.display = 'block';
+            elements.overlay.style.width = '50%';
+            elements.slider.style.left = '50%';
+            elements.overlay.style.borderRight = '2px solid white';
+            elements.slider.style.display = 'flex';
+        }
         elements.selectionLayer.classList.add('hidden');
         elements.selectionBox.style.display = 'none';
         elements.resultsPanel.classList.add('hidden');
