@@ -7,10 +7,16 @@ export const elements = {
 };
 
 export function toggleLoading(isLoading, elements, text = "") {
-    elements.loadingMsg.classList.toggle('hidden', !isLoading);
-    elements.loadingText.innerHTML = text;
+    if (isLoading) {
+        elements.loadingMsg.classList.remove('hidden');
+    } else {
+        elements.loadingMsg.classList.add('hidden');
+    }
+    elements.loadingText.textContent = text;
     elements.processBtn.disabled = isLoading;
-    elements.refineBtn.disabled = isLoading;
+    if (elements.refineBtn) {
+        elements.refineBtn.disabled = isLoading;
+    }
 
     if (isLoading) {
         elements.initialView.classList.add('hidden');
@@ -134,19 +140,30 @@ export function addCustomStyleToGrid(styleName, imageUrl, gridElement, styleInpu
 
     newCard.innerHTML = `
         <img src="${thumbSrc}" alt="${styleName}">
-        <span>${styleName}</span>
+        <div class="style-name">${styleName}</div>
+        <div class="check-icon" style="display: flex;">✓</div>
     `;
 
-    // 3. Remove 'active' class from all other cards
-    document.querySelectorAll('.style-card').forEach(c => c.classList.remove('active'));
+    // 3. Remove 'active' class from all other cards and hide their check icons
+    document.querySelectorAll('.style-card').forEach(c => {
+        c.classList.remove('active');
+        const checkIcon = c.querySelector('.check-icon');
+        if (checkIcon) checkIcon.style.display = 'none';
+    });
 
     // 4. Update the hidden input value immediately
     styleInput.value = styleName;
 
     // 5. Add Click Listener
     newCard.addEventListener('click', () => {
-        document.querySelectorAll('.style-card').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.style-card').forEach(c => {
+            c.classList.remove('active');
+            const checkIcon = c.querySelector('.check-icon');
+            if (checkIcon) checkIcon.style.display = 'none';
+        });
         newCard.classList.add('active');
+        const checkIcon = newCard.querySelector('.check-icon');
+        if (checkIcon) checkIcon.style.display = 'flex';
         styleInput.value = styleName;
     });
 

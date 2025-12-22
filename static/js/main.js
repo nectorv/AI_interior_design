@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFile = null;
     elements.addStyleBtn = document.getElementById('add-style-btn'); 
     elements.styleGrid = document.querySelector('.style-grid');
+    const uploadBtnTrigger = document.getElementById('upload-btn-trigger');
 
     // --- Initialization ---
     Editor.initSlider(elements.comparisonBox, elements.overlay, elements.slider);
@@ -56,20 +57,72 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
 
     // 1. File Upload
-    elements.dropArea.addEventListener('click', () => elements.fileInput.click());
-    elements.fileInput.addEventListener('change', (e) => {
-        if (e.target.files[0]) {
-            selectedFile = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                elements.dropArea.innerHTML = `<img src="${ev.target.result}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
-                elements.processBtn.disabled = false;
-            };
-            reader.readAsDataURL(selectedFile);
+    // Handle click on drop area (viewport) or upload button
+    elements.dropArea.addEventListener('click', (e) => {
+        // Only trigger if clicking on the viewport itself or initial view, not on result view elements
+        if (e.target === elements.dropArea || 
+            e.target.id === 'initial-view' || 
+            e.target.closest('#initial-view') ||
+            (elements.resultView.classList.contains('hidden') && !e.target.closest('#result-view'))) {
+            elements.fileInput.click();
         }
     });
+    
+    // Handle drag and drop
+    elements.dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        elements.dropArea.style.backgroundColor = 'rgba(217, 70, 239, 0.1)';
+    });
+    
+    elements.dropArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        elements.dropArea.style.backgroundColor = '';
+    });
+    
+    elements.dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        elements.dropArea.style.backgroundColor = '';
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type.startsWith('image/')) {
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    // Handle file input change
+    elements.fileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    // Helper function to handle file selection
+    function handleFileSelect(file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            // Hide initial view - result view will show after generation
+            elements.initialView.classList.add('hidden');
+            elements.processBtn.disabled = false;
+        };
+        reader.readAsDataURL(selectedFile);
+    }
+    
+    // Show upload button only when needed
+    if (uploadBtnTrigger) {
+        // Initially hidden, will show after result is generated
+        uploadBtnTrigger.style.display = 'none';
+    }
 
-    // 2. Generate Design
+    // 2. Room Type Selection (Chips)
+    document.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            elements.roomType.value = chip.dataset.value;
+        });
+    });
+
+    // 3. Generate Design
     elements.processBtn.addEventListener('click', async () => {
         if (!selectedFile) return;
         UI.toggleLoading(true, elements, "Generating new interior...");
@@ -83,10 +136,31 @@ document.addEventListener('DOMContentLoaded', () => {
             
             UI.updateStyleCardThumbnail(data.final_image);
 
+            // Wait for both images to load
+            let baseLoaded = false;
+            let finalLoaded = false;
+            
+            const checkBothLoaded = () => {
+                if (baseLoaded && finalLoaded) {
+                    UI.toggleLoading(false, elements);
+                    elements.initialView.classList.add('hidden');
+                    elements.resultView.classList.remove('hidden');
+                    if (uploadBtnTrigger) uploadBtnTrigger.style.display = 'flex';
+                    // Sync sizes after a brief delay to ensure layout is complete
+                    setTimeout(() => {
+                        Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                    }, 100);
+                }
+            };
+            
             elements.baseImg.onload = () => {
-                UI.toggleLoading(false, elements);
-                elements.resultView.classList.remove('hidden');
-                Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                baseLoaded = true;
+                checkBothLoaded();
+            };
+            
+            elements.finalImg.onload = () => {
+                finalLoaded = true;
+                checkBothLoaded();
             };
         } catch (error) {
             alert(error.message);
@@ -94,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 3. Refine Design
+    // 4. Refine Design
     elements.refineBtn.addEventListener('click', async () => {
         const prompt = elements.refineInput.value.trim();
         if (!prompt) return;
@@ -108,7 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.finalImg.onload = () => {
                 UI.toggleLoading(false, elements);
                 elements.resultView.classList.remove('hidden');
-                Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                setTimeout(() => {
+                    Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                }, 100);
             };
         } catch (error) {
             alert(error.message);
@@ -117,16 +193,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 4. View Tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            UI.switchView(e.target.dataset.view, elements);
-            // Re-sync size after switching images
-            requestAnimationFrame(() => Editor.syncImageSizes(elements.baseImg, elements.finalImg));
+    // 5. Non-functional buttons (present but not implemented)
+    const historyBtn = document.getElementById('history-btn');
+    const shareBtn = document.getElementById('share-btn');
+    const undoBtn = document.getElementById('undo-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    
+    if (historyBtn) {
+        historyBtn.addEventListener('click', () => {
+            console.log('History feature not yet implemented');
+            // Placeholder for future implementation
         });
-    });
+    }
+    
+    if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+            console.log('Share feature not yet implemented');
+            // Placeholder for future implementation
+        });
+    }
+    
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            console.log('Undo feature not yet implemented');
+            // Placeholder for future implementation
+        });
+    }
+    
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            console.log('Download feature not yet implemented');
+            // Placeholder for future implementation
+        });
+    }
 
-    // 5. Search Toggle
+    // 6. Search Toggle
     elements.toggleSearchBtn.addEventListener('click', () => {
         const isNowActive = !elements.toggleSearchBtn.classList.contains('active');
         Editor.toggleSearchMode(isNowActive, elements);
@@ -137,17 +238,36 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.selectionBox.style.display = 'none';
     });
 
-    // 6. Style Selection
+    // 7. Style Selection
     // A. Handle standard style cards (Exclude the add-new-style button)
     document.querySelectorAll('.style-card:not(.add-new-style)').forEach(card => {
         card.addEventListener('click', () => {
-            document.querySelectorAll('.style-card').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.style-card').forEach(c => {
+                c.classList.remove('active');
+                const checkIcon = c.querySelector('.check-icon');
+                if (checkIcon) checkIcon.style.display = 'none';
+            });
             card.classList.add('active');
+            const checkIcon = card.querySelector('.check-icon');
+            if (checkIcon) checkIcon.style.display = 'flex';
             elements.styleInput.value = card.dataset.style;
         });
     });
+    
+    // Initialize check icons visibility for active card
+    const activeStyleCard = document.querySelector('.style-card.active');
+    if (activeStyleCard) {
+        const checkIcon = activeStyleCard.querySelector('.check-icon');
+        if (checkIcon) {
+            checkIcon.style.display = 'flex';
+        }
+    }
+    
+    // Hide check icons for non-active cards
+    document.querySelectorAll('.style-card:not(.active) .check-icon').forEach(icon => {
+        icon.style.display = 'none';
+    });
 
-    // B. Handle "Add Custom" Button
     // B. Handle "Add Custom" Button
     if (elements.addStyleBtn) {
         elements.addStyleBtn.addEventListener('click', (e) => {
@@ -159,11 +279,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. If user typed something and didn't cancel
             if (customStyle && customStyle.trim() !== "") {
                 
-                // CHANGE: We pass null instead of elements.finalImg.src
-                // This triggers the "Pending/?" state in the UI
+                // Pass null to trigger the "Pending/?" state in the UI
                 UI.addCustomStyleToGrid(
                     customStyle.trim(), 
-                    null, // <--- CHANGED THIS
+                    null,
                     elements.styleGrid, 
                     elements.styleInput
                 );
@@ -172,5 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Window Resize Handler
-    window.addEventListener('resize', () => Editor.syncImageSizes(elements.baseImg, elements.finalImg));
+    window.addEventListener('resize', () => {
+        if (elements.resultView && !elements.resultView.classList.contains('hidden')) {
+            // Recalculate base image width when window resizes
+            Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+        }
+    });
 });

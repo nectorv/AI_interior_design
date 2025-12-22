@@ -33,10 +33,23 @@ export function initSlider(box, overlay, sliderHandle) {
     window.addEventListener('touchmove', move);
 }
 
-export function syncImageSizes(baseImg, overlayImg) {
-    if (baseImg && overlayImg && baseImg.offsetHeight > 0) {
-        const newWidth = baseImg.getBoundingClientRect().width;
-        overlayImg.style.width = newWidth + 'px';
+export function syncImageSizes(baseImg, finalImg) {
+    // Set base image width to match comparison-box width exactly
+    // This prevents the image from shrinking when overlay width changes
+    if (baseImg && finalImg && finalImg.complete && baseImg.complete) {
+        const comparisonBox = baseImg.closest('.comparison-box');
+        if (!comparisonBox) return;
+        
+        const boxRect = comparisonBox.getBoundingClientRect();
+        
+        // Set base image width to match the comparison box width
+        // This ensures it stays the same size regardless of overlay width
+        baseImg.style.width = boxRect.width + 'px';
+        baseImg.style.height = '100%';
+        baseImg.style.maxWidth = 'none';
+        
+        // Both images use object-fit: cover and height: 100%
+        // The overlay just clips the base image, it doesn't resize it
     }
 }
 
