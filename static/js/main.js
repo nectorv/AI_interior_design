@@ -24,12 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
         storeOriginal: document.getElementById('store-original'),
         refineBtn: document.getElementById('refine-button'),
         refineInput: document.getElementById('refine-prompt'),
+        customInstructionsInput: document.getElementById('custom-instructions-input'),
+        applyInstructionsBtn: document.getElementById('apply-instructions-btn'),
         toggleSearchBtn: document.getElementById('toggle-search-btn'),
         selectionLayer: document.getElementById('selection-layer'),
         selectionBox: document.getElementById('selection-box'),
         resultsPanel: document.getElementById('search-results-panel'),
         resultsGrid: document.getElementById('results-grid'),
         closeResultsBtn: document.getElementById('close-results'),
+        customInstructionsBar: document.getElementById('custom-instructions-bar'),
     };
 
     let selectedFile = null;
@@ -100,8 +103,26 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedFile = file;
         const reader = new FileReader();
         reader.onload = (ev) => {
-            // Hide initial view - result view will show after generation
+            // Hide initial view
             elements.initialView.classList.add('hidden');
+            
+            // Display uploaded image immediately in the center
+            const imageDataUrl = ev.target.result;
+            elements.baseImg.src = imageDataUrl;
+            elements.finalImg.src = imageDataUrl; // Show same image initially
+            elements.storeOriginal.src = imageDataUrl;
+            
+            // Show result view with uploaded image
+            elements.resultView.classList.remove('hidden');
+            
+            // Wait for image to load, then sync sizes
+            elements.baseImg.onload = () => {
+                Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                // Hide overlay initially (show only the uploaded image)
+                elements.overlay.style.width = '0%';
+                elements.slider.style.left = '0%';
+            };
+            
             elements.processBtn.disabled = false;
         };
         reader.readAsDataURL(selectedFile);
@@ -146,6 +167,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     elements.initialView.classList.add('hidden');
                     elements.resultView.classList.remove('hidden');
                     if (uploadBtnTrigger) uploadBtnTrigger.style.display = 'flex';
+                    
+                    // Reset overlay to show comparison (50% split)
+                    elements.overlay.style.width = '50%';
+                    elements.slider.style.left = '50%';
+                    elements.overlay.style.borderRight = '2px solid white';
+                    elements.slider.style.display = 'flex';
+                    
                     // Sync sizes after a brief delay to ensure layout is complete
                     setTimeout(() => {
                         Editor.syncImageSizes(elements.baseImg, elements.finalImg);
@@ -161,6 +189,28 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.finalImg.onload = () => {
                 finalLoaded = true;
                 checkBothLoaded();
+                // Show static badges
+                const beforeBadge = document.querySelector('.badge-before-static');
+                const afterBadge = document.querySelector('.badge-after-static');
+                if (beforeBadge) {
+                    beforeBadge.classList.remove('hidden');
+                    beforeBadge.style.display = 'block';
+                    beforeBadge.style.visibility = 'visible';
+                }
+                if (afterBadge) {
+                    afterBadge.classList.remove('hidden');
+                    afterBadge.style.display = 'block';
+                    afterBadge.style.visibility = 'visible';
+                }
+                // Show custom instructions bar after first generation
+                if (elements.customInstructionsBar) {
+                    elements.customInstructionsBar.classList.remove('hidden');
+                }
+                // Enable custom instructions button after image is loaded
+                if (elements.applyInstructionsBtn && elements.customInstructionsInput) {
+                    const hasText = elements.customInstructionsInput.value.trim().length > 0;
+                    elements.applyInstructionsBtn.disabled = !hasText;
+                }
             };
         } catch (error) {
             alert(error.message);
@@ -168,30 +218,130 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 4. Refine Design
-    elements.refineBtn.addEventListener('click', async () => {
-        const prompt = elements.refineInput.value.trim();
-        if (!prompt) return;
-        
-        UI.toggleLoading(true, elements, "Refining details...");
-        try {
-            const data = await API.refineImage(elements.finalImg.src, prompt);
-            elements.finalImg.src = data.refined_image;
-            elements.refineInput.value = '';
+    // 4. Refine Design (from Advanced Options)
+    if (elements.refineBtn) {
+        elements.refineBtn.addEventListener('click', async () => {
+            const prompt = elements.refineInput.value.trim();
+            if (!prompt) return;
             
-            elements.finalImg.onload = () => {
+            UI.toggleLoading(true, elements, "Refining details...");
+            try {
+                const data = await API.refineImage(elements.finalImg.src, prompt);
+                elements.finalImg.src = data.refined_image;
+                elements.refineInput.value = '';
+                
+                elements.finalImg.onload = () => {
+                    UI.toggleLoading(false, elements);
+                    elements.resultView.classList.remove('hidden');
+                    // Show static badges
+                    const beforeBadge = document.querySelector('.badge-before-static');
+                    const afterBadge = document.querySelector('.badge-after-static');
+                    if (beforeBadge) {
+                        beforeBadge.classList.remove('hidden');
+                        beforeBadge.style.display = 'block';
+                        beforeBadge.style.visibility = 'visible';
+                    }
+                    if (afterBadge) {
+                        afterBadge.classList.remove('hidden');
+                        afterBadge.style.display = 'block';
+                        afterBadge.style.visibility = 'visible';
+                    }
+                    // Show custom instructions bar if not already visible
+                    if (elements.customInstructionsBar) {
+                        elements.customInstructionsBar.classList.remove('hidden');
+                    }
+                    setTimeout(() => {
+                        Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                    }, 100);
+                };
+            } catch (error) {
+                alert(error.message);
                 UI.toggleLoading(false, elements);
                 elements.resultView.classList.remove('hidden');
-                setTimeout(() => {
-                    Editor.syncImageSizes(elements.baseImg, elements.finalImg);
-                }, 100);
-            };
-        } catch (error) {
-            alert(error.message);
-            UI.toggleLoading(false, elements);
-            elements.resultView.classList.remove('hidden');
-        }
-    });
+            }
+        });
+    }
+
+    // 5. Apply Custom Instructions (from typing bar)
+    if (elements.applyInstructionsBtn && elements.customInstructionsInput) {
+        // Initially disable the button until an image is generated
+        elements.applyInstructionsBtn.disabled = true;
+        
+        const updateApplyButtonState = () => {
+            const hasImage = elements.finalImg && elements.finalImg.src && elements.finalImg.src !== '';
+            const hasText = elements.customInstructionsInput.value.trim().length > 0;
+            elements.applyInstructionsBtn.disabled = !hasImage || !hasText;
+        };
+        
+        // Update button state when text changes
+        elements.customInstructionsInput.addEventListener('input', updateApplyButtonState);
+        
+        const applyCustomInstructions = async () => {
+            const prompt = elements.customInstructionsInput.value.trim();
+            if (!prompt) {
+                alert('Please enter custom instructions');
+                return;
+            }
+            
+            // Check if we have a generated image
+            if (!elements.finalImg || !elements.finalImg.src || elements.finalImg.src === '') {
+                alert('Please generate a design first before applying custom instructions');
+                return;
+            }
+            
+            UI.toggleLoading(true, elements, "Applying custom instructions...");
+            elements.applyInstructionsBtn.disabled = true;
+            
+            try {
+                const data = await API.refineImage(elements.finalImg.src, prompt);
+                elements.finalImg.src = data.refined_image;
+                
+                elements.finalImg.onload = () => {
+                    UI.toggleLoading(false, elements);
+                    elements.resultView.classList.remove('hidden');
+                    // Show static badges
+                    const beforeBadge = document.querySelector('.badge-before-static');
+                    const afterBadge = document.querySelector('.badge-after-static');
+                    if (beforeBadge) {
+                        beforeBadge.classList.remove('hidden');
+                        beforeBadge.style.display = 'block';
+                        beforeBadge.style.visibility = 'visible';
+                    }
+                    if (afterBadge) {
+                        afterBadge.classList.remove('hidden');
+                        afterBadge.style.display = 'block';
+                        afterBadge.style.visibility = 'visible';
+                    }
+                    // Show custom instructions bar if not already visible
+                    if (elements.customInstructionsBar) {
+                        elements.customInstructionsBar.classList.remove('hidden');
+                    }
+                    updateApplyButtonState(); // Re-enable if text is still there
+                    setTimeout(() => {
+                        Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                    }, 100);
+                };
+            } catch (error) {
+                alert(error.message || 'Failed to apply custom instructions');
+                UI.toggleLoading(false, elements);
+                elements.resultView.classList.remove('hidden');
+                updateApplyButtonState();
+            }
+        };
+        
+        elements.applyInstructionsBtn.addEventListener('click', applyCustomInstructions);
+        
+        // Allow Enter key to submit (Ctrl/Cmd + Enter)
+        elements.customInstructionsInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                if (!elements.applyInstructionsBtn.disabled) {
+                    applyCustomInstructions();
+                }
+            }
+        });
+        
+    }
 
     // 5. Non-functional buttons (present but not implemented)
     const historyBtn = document.getElementById('history-btn');
