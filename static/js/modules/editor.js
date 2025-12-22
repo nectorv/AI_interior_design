@@ -59,12 +59,18 @@ export function toggleSearchMode(active, elements) {
     elements.toggleSearchBtn.classList.toggle('active', active);
 
     if (active) {
-        elements.overlay.style.width = '100%'; 
-        elements.overlay.style.borderRight = 'none';
+        // Hide overlay to show the final (new) image, not the original
+        elements.overlay.style.display = 'none';
         elements.slider.style.display = 'none';
         elements.selectionLayer.classList.remove('hidden');
         elements.selectionBox.style.display = 'none';
+        // Ensure final image is visible
+        if (elements.finalImg) {
+            elements.finalImg.style.display = 'block';
+        }
     } else {
+        // Show overlay again for comparison view
+        elements.overlay.style.display = 'block';
         elements.overlay.style.width = '50%';
         elements.slider.style.left = '50%';
         elements.overlay.style.borderRight = '2px solid white';
@@ -114,10 +120,10 @@ export function initDrawing(elements, onSelectionComplete) {
         
         // Calculate data for backend
         const visualBox = {
-            left: parseFloat(box.style.left),
-            top: parseFloat(box.style.top),
-            width: parseFloat(box.style.width),
-            height: parseFloat(box.style.height)
+            left: parseFloat(box.style.left) || 0,
+            top: parseFloat(box.style.top) || 0,
+            width: parseFloat(box.style.width) || 0,
+            height: parseFloat(box.style.height) || 0
         };
 
         if (visualBox.width < 20 || visualBox.height < 20) {
@@ -125,9 +131,18 @@ export function initDrawing(elements, onSelectionComplete) {
             return;
         }
 
-        // Calculate scaling
-        const displayedW = elements.baseImg.getBoundingClientRect().width;
+        // Calculate scaling - use final image since that's what we're searching on
+        const finalImgRect = elements.finalImg.getBoundingClientRect();
+        const displayedW = finalImgRect.width;
         const naturalW = elements.finalImg.naturalWidth;
+        
+        // Ensure we have valid dimensions
+        if (!displayedW || !naturalW || displayedW <= 0 || naturalW <= 0) {
+            console.error('Invalid image dimensions for scaling');
+            box.style.display = 'none';
+            return;
+        }
+        
         const scale = naturalW / displayedW;
 
         const backendBox = {
@@ -136,6 +151,14 @@ export function initDrawing(elements, onSelectionComplete) {
             width: visualBox.width * scale,
             height: visualBox.height * scale
         };
+        
+        // Validate backend box values
+        if (!backendBox.x || !backendBox.y || !backendBox.width || !backendBox.height ||
+            isNaN(backendBox.x) || isNaN(backendBox.y) || isNaN(backendBox.width) || isNaN(backendBox.height)) {
+            console.error('Invalid backend box values:', backendBox);
+            box.style.display = 'none';
+            return;
+        }
 
         onSelectionComplete(backendBox);
     });

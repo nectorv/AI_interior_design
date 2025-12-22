@@ -142,12 +142,25 @@ def search_furniture():
 
     try:
         # Normalize and validate crop values
-        parsed_box = {
-            'x': float(crop_box['x']),
-            'y': float(crop_box['y']),
-            'width': float(crop_box['width']),
-            'height': float(crop_box['height'])
-        }
+        # Handle None values and ensure all values are valid numbers
+        x = crop_box.get('x')
+        y = crop_box.get('y')
+        width = crop_box.get('width')
+        height = crop_box.get('height')
+        
+        if x is None or y is None or width is None or height is None:
+            return jsonify({'error': 'Missing crop box coordinates'}), 400
+        
+        try:
+            parsed_box = {
+                'x': float(x),
+                'y': float(y),
+                'width': float(width),
+                'height': float(height)
+            }
+        except (ValueError, TypeError) as e:
+            return jsonify({'error': f'Invalid crop box values: {str(e)}'}), 400
+            
         if parsed_box['width'] <= 0 or parsed_box['height'] <= 0:
             return jsonify({'error': 'Crop dimensions must be positive'}), 400
 
