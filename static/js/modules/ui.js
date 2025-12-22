@@ -24,7 +24,6 @@ export function switchView(viewType, elements) {
     });
 
     if (viewType === 'original') elements.baseImg.src = elements.storeOriginal.src;
-    if (viewType === 'empty') elements.baseImg.src = elements.storeEmpty.src;
 }
 
 export function renderSearchResults(products, container) {

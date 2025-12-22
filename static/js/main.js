@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
         baseImg: document.getElementById('base-image'),
         finalImg: document.getElementById('final-image'),
         storeOriginal: document.getElementById('store-original'),
-        storeEmpty: document.getElementById('store-empty'),
         refineBtn: document.getElementById('refine-button'),
         refineInput: document.getElementById('refine-prompt'),
         toggleSearchBtn: document.getElementById('toggle-search-btn'),
@@ -79,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await API.redesignImage(selectedFile, elements.styleInput.value, elements.roomType.value);
             
             elements.storeOriginal.src = data.original_image;
-            elements.storeEmpty.src = data.empty_image;
             elements.baseImg.src = data.original_image;
             elements.finalImg.src = data.final_image;
             
