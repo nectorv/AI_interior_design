@@ -255,8 +255,9 @@ body {
     align-items: center;
     justify-content: center;
     cursor: col-resize; /* Shows resize cursor */
-    z-index: 20;
+    z-index: 30; /* Above the shadow gradients (z-index: 15) */
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    isolation: isolate; /* Creates a new stacking context */
 }
 
 /* Ensure slider is hidden when it has the hidden class, even with inline styles */
@@ -434,8 +435,8 @@ body {
 
 .instructions-bar-content {
     background: white;
-    padding: 1.5rem;
-    border-radius: 4px;
+    padding: 0.75rem;
+    border-radius: 18px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--border-color);
 }
@@ -452,59 +453,59 @@ body {
 
 .instructions-input-wrapper-center {
     display: flex;
-    gap: 0.75rem;
-    align-items: flex-end;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .instructions-input-center {
     flex: 1;
-    padding: 1rem;
-    border: 2px solid var(--border-color);
-    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 32px;
     font-family: inherit;
     font-size: 0.95rem;
-    resize: none;
-    min-height: 60px;
+    background: white;
     line-height: 1.5;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    height: 48px;
 }
 
 .instructions-input-center:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.1);
+    box-shadow: 0 2px 6px rgba(217, 70, 239, 0.2);
+}
+
+.instructions-input-center::placeholder {
+    color: #9ca3af;
 }
 
 .apply-instructions-btn-center {
-    padding: 1rem 1.75rem;
+    padding: 0;
+    width: 48px;
+    height: 48px;
     background: var(--primary-gradient);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 12px;
     cursor: pointer;
     font-family: inherit;
-    font-weight: 600;
-    font-size: 0.95rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
     transition: opacity 0.2s, transform 0.2s;
-    white-space: nowrap;
-    height: fit-content;
-    box-shadow: 0 1px 3px rgba(217, 70, 239, 0.2);
+    box-shadow: 0 1px 3px rgba(217, 70, 239, 0.3);
+    flex-shrink: 0;
 }
 
 .apply-instructions-btn-center:hover:not(:disabled) {
     opacity: 0.9;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(217, 70, 239, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(217, 70, 239, 0.4);
 }
 
 .apply-instructions-btn-center:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 h3 {
@@ -678,6 +679,46 @@ h3 {
     font-size: 0.875rem;
     color: var(--text-main);
     font-weight: 500;
+}
+
+.checkbox-option {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.checkbox-option label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.checkbox-option input[type="checkbox"] {
+    margin-top: 0.125rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.checkbox-option .checkbox-label-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.checkbox-option label strong {
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.checkbox-option .option-description {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    line-height: 1.4;
 }
 
 .input-with-btn {

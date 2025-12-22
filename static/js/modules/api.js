@@ -1,10 +1,11 @@
 /* static/js/modules/api.js */
 
-export async function redesignImage(file, style, roomType) {
+export async function redesignImage(file, style, roomType, emptyThenGenerate = false) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('style', style);
     formData.append('room_type', roomType);
+    formData.append('empty_then_generate', emptyThenGenerate ? 'true' : 'false');
 
     const response = await fetch('/api/redesign', { method: 'POST', body: formData });
     return handleResponse(response);

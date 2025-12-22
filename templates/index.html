@@ -54,7 +54,9 @@
                         </div>
 
                         <div id="slider" class="slider-handle">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><path d="M7 16V8m10 8V8m-6 8V8"/></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 12h8M6 9l-3 3 3 3M18 9l3 3-3 3"/>
+                            </svg>
                         </div>
                         
                         <div id="selection-layer" class="hidden">
@@ -65,25 +67,18 @@
                     <!-- Custom Instructions Typing Bar - Center Position -->
                     <div id="custom-instructions-bar" class="custom-instructions-bar-center hidden">
                         <div class="instructions-bar-content">
-                            <label for="custom-instructions-input" class="instructions-label-center">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                                </svg>
-                                Custom Instructions
-                            </label>
                             <div class="instructions-input-wrapper-center">
-                                <textarea 
+                                <input 
+                                    type="text"
                                     id="custom-instructions-input" 
                                     class="instructions-input-center" 
-                                    placeholder="Type your custom design instructions here... (e.g., Add a blue sofa, change the wall color to beige)"
-                                    rows="2"
-                                ></textarea>
+                                    placeholder="Describe specific modifications (e.g., 'Add a blue sofa', 'Change wall color to beige')"
+                                />
                                 <button id="apply-instructions-btn" class="apply-instructions-btn-center" title="Apply custom instructions">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                                        <polyline points="22 4 12 14.01 9 11.01"/>
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                                     </svg>
-                                    Apply
                                 </button>
                             </div>
                         </div>
@@ -179,6 +174,15 @@
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
                         </summary>
                         <div class="advanced-content">
+                            <div class="checkbox-option">
+                                <label for="empty-then-generate">
+                                    <input type="checkbox" id="empty-then-generate" name="empty-then-generate">
+                                    <span class="checkbox-label-content">
+                                        <strong>Empty then generate</strong>
+                                        <span class="option-description">Remove existing furniture first for more original results (takes longer)</span>
+                                    </span>
+                                </label>
+                            </div>
                             <label for="refine-prompt">Refine Instructions:</label>
                             <div class="input-with-btn">
                                 <input type="text" id="refine-prompt" placeholder="e.g., Make the sofa blue...">

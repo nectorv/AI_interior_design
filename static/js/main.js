@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsGrid: document.getElementById('results-grid'),
         closeResultsBtn: document.getElementById('close-results'),
         customInstructionsBar: document.getElementById('custom-instructions-bar'),
+        emptyThenGenerate: document.getElementById('empty-then-generate'),
     };
 
     let selectedFile = null;
@@ -206,6 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // This ensures they're hidden before the DOM renders
             hideComparisonElements();
             
+            // Show custom instructions bar after image is uploaded (but before generation)
+            // Note: Slider and badges stay hidden until after generation
+            if (elements.customInstructionsBar) {
+                elements.customInstructionsBar.classList.remove('hidden');
+            }
+            
             // Display uploaded image immediately in the center
             const imageDataUrl = ev.target.result;
             elements.baseImg.src = imageDataUrl;
@@ -219,16 +226,29 @@ document.addEventListener('DOMContentLoaded', () => {
             // Use requestAnimationFrame to ensure DOM has updated
             requestAnimationFrame(() => {
                 hideComparisonElements();
+                // Show custom instructions bar after image is uploaded
+                if (elements.customInstructionsBar) {
+                    elements.customInstructionsBar.classList.remove('hidden');
+                }
             });
             
             // Wait for image to load, then sync sizes
             elements.baseImg.onload = () => {
                 Editor.syncImageSizes(elements.baseImg, elements.finalImg);
-                // Ensure comparison elements stay hidden after image loads
+                // Ensure comparison elements stay hidden after image loads (slider and badges)
                 hideComparisonElements();
+                // Show custom instructions bar after image is uploaded
+                if (elements.customInstructionsBar) {
+                    elements.customInstructionsBar.classList.remove('hidden');
+                }
             };
             
             elements.processBtn.disabled = false;
+            
+            // Show custom instructions bar immediately after upload
+            if (elements.customInstructionsBar) {
+                elements.customInstructionsBar.classList.remove('hidden');
+            }
         };
         reader.readAsDataURL(selectedFile);
     }
@@ -251,10 +271,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Generate Design
     elements.processBtn.addEventListener('click', async () => {
         if (!selectedFile) return;
-        UI.toggleLoading(true, elements, "Generating new interior...");
+        
+        // Check if empty then generate is enabled
+        const emptyThenGenerate = elements.emptyThenGenerate && elements.emptyThenGenerate.checked;
+        const loadingMessage = emptyThenGenerate 
+            ? "Emptying room, then generating new design..." 
+            : "Generating new interior...";
+        
+        UI.toggleLoading(true, elements, loadingMessage);
         
         try {
-            const data = await API.redesignImage(selectedFile, elements.styleInput.value, elements.roomType.value);
+            const data = await API.redesignImage(
+                selectedFile, 
+                elements.styleInput.value, 
+                elements.roomType.value,
+                emptyThenGenerate
+            );
             
             elements.storeOriginal.src = data.original_image;
             elements.baseImg.src = data.original_image;

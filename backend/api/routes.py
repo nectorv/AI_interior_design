@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, request, jsonify, render_template
 
 from backend.services.image_service import crop_image_from_data_uri
 from backend.utils.image_utils import process_image_for_frontend, decode_frontend_image
-from backend.core.prompts import get_design_prompt, get_refine_prompt
+from backend.core.prompts import get_design_prompt, get_refine_prompt, get_empty_room_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ def redesign_image():
         - file: Image file in request.files
         - style: Design style (form data)
         - room_type: Type of room (form data)
+        - empty_then_generate: Optional boolean flag (form data, default: False)
     
     Returns:
         JSON with original_image, empty_image, and final_image (data URIs)
@@ -51,6 +52,9 @@ def redesign_image():
 
     style = (request.form.get('style') or 'Nordic').strip()
     room_type = (request.form.get('room_type') or 'Living Room').strip()
+    
+    # Check if empty_then_generate flag is set
+    empty_then_generate = request.form.get('empty_then_generate', 'false').lower() in ('true', '1', 'yes')
 
     original_bytes = file.read()
     if not original_bytes:
@@ -59,20 +63,42 @@ def redesign_image():
     ai_service, _ = _get_services()
 
     try:
-        design_prompt = get_design_prompt(style, room_type)
-        final_bytes = ai_service.generate_image(original_bytes, design_prompt)
+        if empty_then_generate:
+            # Step 1: Empty the room
+            empty_prompt = get_empty_room_prompt()
+            empty_bytes = ai_service.generate_image(original_bytes, empty_prompt)
+            
+            if not empty_bytes:
+                return jsonify({'error': 'Failed to empty room'}), 500
+            
+            # Step 2: Generate design from empty room
+            design_prompt = get_design_prompt(style, room_type)
+            final_bytes = ai_service.generate_image(empty_bytes, design_prompt)
+            
+            if not final_bytes:
+                return jsonify({'error': 'Failed to design room'}), 500
+            
+            return jsonify({
+                'original_image': process_image_for_frontend(original_bytes),
+                'empty_image': process_image_for_frontend(empty_bytes),
+                'final_image': process_image_for_frontend(final_bytes)
+            })
+        else:
+            # Original single-step process
+            design_prompt = get_design_prompt(style, room_type)
+            final_bytes = ai_service.generate_image(original_bytes, design_prompt)
+            
+            if not final_bytes:
+                return jsonify({'error': 'Failed to design room'}), 500
+            
+            return jsonify({
+                'original_image': process_image_for_frontend(original_bytes),
+                'empty_image': process_image_for_frontend(original_bytes),  # Keep original for comparison
+                'final_image': process_image_for_frontend(final_bytes)
+            })
     except Exception:
         logger.exception("Failed to generate design")
         return jsonify({'error': 'Failed to design room'}), 500
-
-    if not final_bytes:
-        return jsonify({'error': 'Failed to design room'}), 500
-
-    return jsonify({
-        'original_image': process_image_for_frontend(original_bytes),
-        'empty_image': process_image_for_frontend(original_bytes),  # Reserved for future feature
-        'final_image': process_image_for_frontend(final_bytes)
-    })
 
 
 @api_bp.route('/api/refine', methods=['POST'])
