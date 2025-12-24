@@ -494,6 +494,17 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.closeResultsBtn.addEventListener('click', () => {
         elements.resultsPanel.classList.add('hidden');
         elements.selectionBox.style.display = 'none';
+        // Exit search mode when closing results
+        if (elements.toggleSearchBtn.classList.contains('active')) {
+            Editor.toggleSearchMode(false, elements);
+        }
+    });
+
+    // ESC key to exit search mode
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.toggleSearchBtn.classList.contains('active')) {
+            Editor.toggleSearchMode(false, elements);
+        }
     });
 
     // 7. Style Selection
