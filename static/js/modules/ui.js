@@ -36,7 +36,7 @@ export function renderSearchResults(products, container) {
     container.innerHTML = '';
     
     if (!products || products.length === 0) {
-        container.innerHTML = '<p>No matching furniture found.</p>';
+        container.innerHTML = '<div class="no-results"><p>No matching furniture found.</p></div>';
         return;
     }
 
@@ -44,64 +44,70 @@ export function renderSearchResults(products, container) {
         const imgUrl = p.image_url || 'static/assets/placeholder.jpg';
         const query = encodeURIComponent(p.search_query || '');
         const googleSearchUrl = `https://www.google.com/search?q=${query}`;
+        const matchScore = ((p.score || 0) * 100).toFixed(0);
 
-        const card = document.createElement('div');
+        const card = document.createElement('a');
         card.className = 'product-card';
+        card.href = googleSearchUrl;
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
 
+        // Image container with match badge
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'product-image-container';
+        
         const thumb = document.createElement('img');
         thumb.src = imgUrl;
-        thumb.alt = 'Product';
-        thumb.style.width = '70px';
-        thumb.style.height = '70px';
-        thumb.style.objectFit = 'cover';
-        thumb.style.borderRadius = '4px';
+        thumb.alt = p.title || 'Product';
+        thumb.className = 'product-image';
+        thumb.loading = 'lazy';
 
-        const info = document.createElement('div');
-        info.className = 'product-info';
-        info.style.flex = '1';
-        info.style.marginLeft = '10px';
+        // Match score badge
+        const matchBadge = document.createElement('div');
+        matchBadge.className = 'match-badge';
+        matchBadge.textContent = `${matchScore}% match`;
+        
+        imageContainer.appendChild(thumb);
+        imageContainer.appendChild(matchBadge);
+
+        // Content container
+        const content = document.createElement('div');
+        content.className = 'product-content';
 
         const titleEl = document.createElement('h4');
-        titleEl.style.margin = '0 0 4px 0';
-        const link = document.createElement('a');
-        link.href = googleSearchUrl;
-        link.target = '_blank';
-        link.style.color = 'white';
-        link.style.textDecoration = 'none';
-        link.style.borderBottom = '1px solid #555';
-        link.textContent = p.title || 'View item';
-        titleEl.appendChild(link);
+        titleEl.className = 'product-title';
+        titleEl.textContent = p.title || 'View item';
 
         const meta = document.createElement('div');
-        meta.style.fontSize = '0.8rem';
-        meta.style.color = '#ccc';
-        meta.style.display = 'flex';
-        meta.style.flexDirection = 'column';
-        meta.style.gap = '2px';
+        meta.className = 'product-meta';
 
-        const priceEl = document.createElement('span');
-        priceEl.style.color = '#4CAF50';
-        priceEl.style.fontWeight = 'bold';
-        priceEl.textContent = p.price || 'N/A';
+        // Price
+        if (p.price && p.price !== 'N/A') {
+            const priceEl = document.createElement('div');
+            priceEl.className = 'product-price';
+            priceEl.textContent = p.price;
+            meta.appendChild(priceEl);
+        }
 
-        const sourceEl = document.createElement('span');
-        sourceEl.style.color = '#888';
-        sourceEl.textContent = p.source || '';
+        // Source
+        if (p.source) {
+            const sourceEl = document.createElement('div');
+            sourceEl.className = 'product-source';
+            sourceEl.textContent = p.source;
+            meta.appendChild(sourceEl);
+        }
 
-        const scoreEl = document.createElement('span');
-        scoreEl.style.fontSize = '0.7rem';
-        scoreEl.style.opacity = '0.6';
-        scoreEl.textContent = `Match: ${((p.score || 0) * 100).toFixed(0)}%`;
+        // External link indicator
+        const linkIndicator = document.createElement('div');
+        linkIndicator.className = 'link-indicator';
+        linkIndicator.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>';
 
-        meta.appendChild(priceEl);
-        meta.appendChild(sourceEl);
-        meta.appendChild(scoreEl);
+        content.appendChild(titleEl);
+        content.appendChild(meta);
+        content.appendChild(linkIndicator);
 
-        info.appendChild(titleEl);
-        info.appendChild(meta);
-
-        card.appendChild(thumb);
-        card.appendChild(info);
+        card.appendChild(imageContainer);
+        card.appendChild(content);
         container.appendChild(card);
     });
 }
