@@ -268,9 +268,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Helper function to exit search furniture mode if active
+    function exitSearchModeIfActive() {
+        if (elements.toggleSearchBtn.classList.contains('active')) {
+            Editor.toggleSearchMode(false, elements);
+        }
+    }
+
     // 3. Generate Design
     elements.processBtn.addEventListener('click', async () => {
         if (!selectedFile) return;
+        
+        // Exit search furniture mode before generating new design
+        exitSearchModeIfActive();
         
         // Check if empty then generate is enabled
         const emptyThenGenerate = elements.emptyThenGenerate && elements.emptyThenGenerate.checked;
@@ -394,6 +404,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Please generate a design first before applying custom instructions');
                 return;
             }
+            
+            // Exit search furniture mode before generating new design
+            exitSearchModeIfActive();
             
             UI.toggleLoading(true, elements, "Applying custom instructions...");
             elements.applyInstructionsBtn.disabled = true;
