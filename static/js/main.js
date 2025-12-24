@@ -479,9 +479,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (downloadBtn) {
-        downloadBtn.addEventListener('click', () => {
-            console.log('Download feature not yet implemented');
-            // Placeholder for future implementation
+        downloadBtn.addEventListener('click', async () => {
+            // Get the current image
+            const currentImage = elements.finalImg;
+            
+            // Check if there's an image to download
+            if (!currentImage || !currentImage.src || currentImage.src === '') {
+                alert('No image available to download. Please upload and generate a design first.');
+                return;
+            }
+            
+            try {
+                let blob;
+                let filename = 'interior-design.jpg';
+                
+                // Check if it's a data URL or regular URL
+                if (currentImage.src.startsWith('data:')) {
+                    // Convert data URL to blob
+                    const response = await fetch(currentImage.src);
+                    blob = await response.blob();
+                } else {
+                    // Fetch the image from URL
+                    const response = await fetch(currentImage.src);
+                    blob = await response.blob();
+                    
+                    // Try to extract filename from URL if possible
+                    const urlPath = new URL(currentImage.src).pathname;
+                    const urlFilename = urlPath.split('/').pop();
+                    if (urlFilename && urlFilename.includes('.')) {
+                        filename = urlFilename;
+                    }
+                }
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                
+                // Cleanup
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error downloading image:', error);
+                alert('Failed to download image. Please try again.');
+            }
         });
     }
 
