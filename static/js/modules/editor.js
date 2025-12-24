@@ -62,6 +62,10 @@ export function toggleSearchMode(active, elements) {
         // Hide overlay to show the final (new) image, not the original
         elements.overlay.style.display = 'none';
         elements.slider.style.display = 'none';
+        // Hide custom instructions bar when using furniture searcher
+        if (elements.customInstructionsBar) {
+            elements.customInstructionsBar.classList.add('hidden');
+        }
         elements.selectionLayer.classList.remove('hidden');
         elements.selectionBox.style.display = 'none';
         // Ensure final image is visible
@@ -77,6 +81,11 @@ export function toggleSearchMode(active, elements) {
             elements.slider.style.left = '50%';
             elements.overlay.style.borderRight = '2px solid white';
             elements.slider.style.display = 'flex';
+        }
+        // Show custom instructions bar again when exiting search mode
+        // Only show if it was previously visible (not hidden by other logic)
+        if (elements.customInstructionsBar && elements.finalImg && elements.finalImg.src) {
+            elements.customInstructionsBar.classList.remove('hidden');
         }
         elements.selectionLayer.classList.add('hidden');
         elements.selectionBox.style.display = 'none';
