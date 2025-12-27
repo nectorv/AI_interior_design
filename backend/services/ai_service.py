@@ -3,6 +3,7 @@ import logging
 from google import genai
 from google.genai import types
 from backend.core.config import Config
+from backend.utils.image_utils import detect_image_mime_type
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,11 @@ class GeminiService:
             Raw bytes of generated image, or None if generation fails
         """
         try:
+            # Detect the actual image format from bytes
+            mime_type = detect_image_mime_type(input_image_bytes)
             image_part = types.Part.from_bytes(
                 data=input_image_bytes,
-                mime_type='image/jpeg'
+                mime_type=mime_type
             )
             
             response = self.client.models.generate_content(

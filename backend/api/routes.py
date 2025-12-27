@@ -3,7 +3,7 @@ import logging
 from flask import Blueprint, current_app, request, jsonify, render_template
 
 from backend.services.image_service import crop_image_from_data_uri
-from backend.utils.image_utils import process_image_for_frontend, decode_frontend_image
+from backend.utils.image_utils import process_image_for_frontend, decode_frontend_image, detect_image_mime_type
 from backend.core.prompts import get_design_prompt, get_refine_prompt, get_empty_room_prompt
 
 logger = logging.getLogger(__name__)
@@ -47,18 +47,23 @@ def redesign_image():
     if not file or file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    if file.mimetype not in ('image/jpeg', 'image/png'):
-        return jsonify({'error': 'Unsupported file type'}), 400
+    original_bytes = file.read()
+    if not original_bytes:
+        return jsonify({'error': 'Empty file'}), 400
+
+    # Validate file content by detecting actual image format
+    # This is more reliable than trusting the mimetype from the client
+    allowed_mimetypes = {'image/jpeg', 'image/png', 'image/webp'}
+    detected_mime_type = detect_image_mime_type(original_bytes)
+    
+    if detected_mime_type not in allowed_mimetypes:
+        return jsonify({'error': f'Unsupported file type. Detected: {detected_mime_type}. Supported: JPEG, PNG, WebP'}), 400
 
     style = (request.form.get('style') or 'Nordic').strip()
     room_type = (request.form.get('room_type') or 'Living Room').strip()
     
     # Check if empty_then_generate flag is set
     empty_then_generate = request.form.get('empty_then_generate', 'false').lower() in ('true', '1', 'yes')
-
-    original_bytes = file.read()
-    if not original_bytes:
-        return jsonify({'error': 'Empty file'}), 400
 
     ai_service, _ = _get_services()
 

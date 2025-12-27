@@ -9,8 +9,31 @@ export const elements = {
 export function toggleLoading(isLoading, elements, text = "") {
     if (isLoading) {
         elements.loadingMsg.classList.remove('hidden');
+        
+        // Show old image in background with transparency
+        if (elements.loadingBackground) {
+            // Try to get the current image to show - prioritize finalImg, then baseImg, then storeOriginal
+            let oldImageSrc = null;
+            if (elements.finalImg && elements.finalImg.src && elements.finalImg.src !== '') {
+                oldImageSrc = elements.finalImg.src;
+            } else if (elements.baseImg && elements.baseImg.src && elements.baseImg.src !== '') {
+                oldImageSrc = elements.baseImg.src;
+            } else if (elements.storeOriginal && elements.storeOriginal.src && elements.storeOriginal.src !== '') {
+                oldImageSrc = elements.storeOriginal.src;
+            }
+            
+            if (oldImageSrc) {
+                elements.loadingBackground.style.backgroundImage = `url(${oldImageSrc})`;
+                elements.loadingBackground.classList.remove('hidden');
+            }
+        }
     } else {
         elements.loadingMsg.classList.add('hidden');
+        
+        // Hide background image when loading ends
+        if (elements.loadingBackground) {
+            elements.loadingBackground.classList.add('hidden');
+        }
     }
     elements.loadingText.textContent = text;
     elements.processBtn.disabled = isLoading;

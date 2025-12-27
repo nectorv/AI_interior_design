@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultView: document.getElementById('result-view'),
         loadingMsg: document.getElementById('loading-msg'),
         loadingText: document.getElementById('loading-text'),
+        loadingBackground: document.getElementById('loading-background'),
         comparisonBox: document.getElementById('comparison-box'),
         overlay: document.getElementById('overlay'),
         slider: document.getElementById('slider'),
