@@ -45,6 +45,94 @@ document.addEventListener('DOMContentLoaded', () => {
     const beforeBadge = document.querySelector('.badge-before-static');
     const afterBadge = document.querySelector('.badge-after-static');
 
+    // History management for undo/revert functionality
+    const imageHistory = {
+        states: [], // Array of { finalImage: url, baseImage: url }
+        maxSize: 10,
+        currentIndex: -1,
+        
+        save(finalImageSrc, baseImageSrc) {
+            // Remove any "future" history if we're not at the end (user did undo then new operation)
+            if (this.currentIndex < this.states.length - 1) {
+                this.states = this.states.slice(0, this.currentIndex + 1);
+            }
+            
+            // Add new state
+            this.states.push({
+                finalImage: finalImageSrc,
+                baseImage: baseImageSrc || finalImageSrc // Use finalImage as base if not provided
+            });
+            this.currentIndex = this.states.length - 1;
+            
+            // Limit history size (remove oldest entries)
+            if (this.states.length > this.maxSize) {
+                this.states.shift();
+                this.currentIndex--;
+            }
+            
+            // Update button states
+            this.updateButtons();
+        },
+        
+        canUndo() {
+            return this.currentIndex > 0 && this.states.length > 1;
+        },
+        
+        canRedo() {
+            return this.currentIndex < this.states.length - 1;
+        },
+        
+        undo() {
+            if (!this.canUndo()) {
+                return null;
+            }
+            this.currentIndex--;
+            this.updateButtons();
+            return this.states[this.currentIndex];
+        },
+        
+        redo() {
+            if (!this.canRedo()) {
+                return null;
+            }
+            this.currentIndex++;
+            this.updateButtons();
+            return this.states[this.currentIndex];
+        },
+        
+        clear() {
+            this.states = [];
+            this.currentIndex = -1;
+            this.updateButtons();
+        },
+        
+        updateButtons() {
+            const undoBtn = document.getElementById('undo-btn');
+            const redoBtn = document.getElementById('redo-btn');
+            
+            if (undoBtn) {
+                undoBtn.disabled = !this.canUndo();
+                undoBtn.title = this.canUndo() 
+                    ? 'Undo last change' 
+                    : 'No changes to undo';
+            }
+            
+            if (redoBtn) {
+                redoBtn.disabled = !this.canRedo();
+                redoBtn.title = this.canRedo() 
+                    ? 'Redo last undone change' 
+                    : 'No changes to redo';
+            }
+        },
+        
+        getCurrentState() {
+            if (this.currentIndex >= 0 && this.currentIndex < this.states.length) {
+                return this.states[this.currentIndex];
+            }
+            return null;
+        }
+    };
+
     // Helper function to safely set image src with cleanup of previous handlers
     function setImageSrcWithCleanup(imgElement, newSrc, onloadHandler) {
         if (!imgElement) return;
@@ -56,6 +144,32 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set new onload handler if provided
         if (onloadHandler) {
             imgElement.onload = onloadHandler;
+        }
+    }
+
+    // Helper function to restore image state (used by both undo and redo)
+    function restoreImageState(state) {
+        if (!state) return;
+        
+        // Exit search furniture mode if active
+        exitSearchModeIfActive();
+        
+        // Restore final image
+        setImageSrcWithCleanup(elements.finalImg, state.finalImage, () => {
+            // Update UI after image loads
+            elements.resultView.classList.remove('hidden');
+            showComparisonElements();
+            
+            // Sync sizes after a brief delay
+            setTimeout(() => {
+                Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+            }, 100);
+        });
+        
+        // Restore base image if it was different
+        if (state.baseImage && state.baseImage !== state.finalImage) {
+            setImageSrcWithCleanup(elements.baseImg, state.baseImage);
+            setImageSrcWithCleanup(elements.storeOriginal, state.baseImage);
         }
     }
 
@@ -209,6 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper function to handle file selection
     function handleFileSelect(file) {
         selectedFile = file;
+        // Clear history when new file is uploaded
+        imageHistory.clear();
+        
         const reader = new FileReader();
         reader.onload = (ev) => {
             // Hide initial view
@@ -241,6 +358,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             setImageSrcWithCleanup(elements.finalImg, imageDataUrl); // Show same image initially
             setImageSrcWithCleanup(elements.storeOriginal, imageDataUrl);
+            
+            // Save initial state to history (as first state)
+            imageHistory.save(imageDataUrl, imageDataUrl);
             
             // Show result view with uploaded image
             elements.resultView.classList.remove('hidden');
@@ -337,6 +457,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         elements.applyInstructionsBtn.disabled = !hasText;
                     }
                     
+                    // Save new state to history after images are loaded
+                    imageHistory.save(data.final_image, data.original_image);
+                    
                     // Sync sizes after a brief delay to ensure layout is complete
                     setTimeout(() => {
                         Editor.syncImageSizes(elements.baseImg, elements.finalImg);
@@ -394,6 +517,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Exit search furniture mode before generating new design
             exitSearchModeIfActive();
             
+            // Get current base image to preserve it
+            const currentBaseImage = elements.baseImg && elements.baseImg.src ? elements.baseImg.src : null;
+            
             UI.toggleLoading(true, elements, "Applying custom instructions...");
             elements.applyInstructionsBtn.disabled = true;
             
@@ -407,6 +533,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // --- REPLACEMENT: Use helper function ---
                     showComparisonElements();
+                    
+                    // Save new state to history after image is loaded
+                    imageHistory.save(data.refined_image, currentBaseImage || data.refined_image);
                     
                     // Clear the input field after successful application
                     elements.customInstructionsInput.value = '';
@@ -459,10 +588,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (undoBtn) {
         undoBtn.addEventListener('click', () => {
-            console.log('Undo feature not yet implemented');
-            // Placeholder for future implementation
+            // Get previous state from history
+            const previousState = imageHistory.undo();
+            restoreImageState(previousState);
         });
     }
+
+    // Redo button
+    const redoBtn = document.getElementById('redo-btn');
+    if (redoBtn) {
+        redoBtn.addEventListener('click', () => {
+            // Get next state from history
+            const nextState = imageHistory.redo();
+            restoreImageState(nextState);
+        });
+    }
+
+    // Initialize button states
+    imageHistory.updateButtons();
     
     if (downloadBtn) {
         downloadBtn.addEventListener('click', async () => {

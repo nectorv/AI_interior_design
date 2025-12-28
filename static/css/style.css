@@ -369,6 +369,16 @@ body {
     color: white;
 }
 
+.tool-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.tool-btn:disabled:hover {
+    transform: none;
+}
+
 /* Loading Background - Shows old image with transparency */
 .loading-background {
     position: absolute;
