@@ -61,6 +61,7 @@ def redesign_image():
 
     style = (request.form.get('style') or 'Nordic').strip()
     room_type = (request.form.get('room_type') or 'Living Room').strip()
+    additional_instructions = request.form.get('additional_instructions', '').strip()
     
     # Check if empty_then_generate flag is set
     empty_then_generate = request.form.get('empty_then_generate', 'false').lower() in ('true', '1', 'yes')
@@ -77,7 +78,7 @@ def redesign_image():
                 return jsonify({'error': 'Failed to empty room'}), 500
             
             # Step 2: Generate design from empty room
-            design_prompt = get_design_prompt(style, room_type)
+            design_prompt = get_design_prompt(style, room_type, additional_instructions)
             final_bytes = ai_service.generate_image(empty_bytes, design_prompt)
             
             if not final_bytes:
@@ -90,7 +91,7 @@ def redesign_image():
             })
         else:
             # Original single-step process
-            design_prompt = get_design_prompt(style, room_type)
+            design_prompt = get_design_prompt(style, room_type, additional_instructions)
             final_bytes = ai_service.generate_image(original_bytes, design_prompt)
             
             if not final_bytes:

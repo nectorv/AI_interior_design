@@ -767,6 +767,21 @@ h3 {
     opacity: 0.9;
 }
 
+.input-wrapper {
+    margin-top: 0.5rem;
+}
+
+.input-wrapper textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 0.875rem;
+    resize: vertical;
+    min-height: 60px;
+}
+
 /* Sidebar Footer */
 .sidebar-footer {
     padding: 1.5rem;

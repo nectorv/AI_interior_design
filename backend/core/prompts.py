@@ -11,21 +11,27 @@ def get_empty_room_prompt():
     )
 
 
-def get_design_prompt(style, room_type):
+def get_design_prompt(style, room_type, additional_instructions=None):
     """Generate prompt for furnishing a room in a specific style.
     
     Args:
         style: Interior design style (e.g., 'Nordic', 'Modern')
         room_type: Type of room (e.g., 'Living Room', 'Bedroom')
+        additional_instructions: Optional additional instructions to append to the prompt
     
     Returns:
         Formatted prompt string
     """
-    return (
+    base_prompt = (
         f"Furnish this empty room as a {style} {room_type}. "
         "Keep the exact architecture, size, window positions, lighting, and perspective unchanged. "
         "Add furniture, rugs, and decor matching the style. Photorealistic."
     )
+    
+    if additional_instructions and additional_instructions.strip():
+        return f"{base_prompt} {additional_instructions.strip()}"
+    
+    return base_prompt
 
 
 def get_refine_prompt(instruction):

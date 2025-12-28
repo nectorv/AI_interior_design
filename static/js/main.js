@@ -23,8 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         baseImg: document.getElementById('base-image'),
         finalImg: document.getElementById('final-image'),
         storeOriginal: document.getElementById('store-original'),
-        refineBtn: document.getElementById('refine-button'),
-        refineInput: document.getElementById('refine-prompt'),
         customInstructionsInput: document.getElementById('custom-instructions-input'),
         applyInstructionsBtn: document.getElementById('apply-instructions-btn'),
         toggleSearchBtn: document.getElementById('toggle-search-btn'),
@@ -35,12 +33,31 @@ document.addEventListener('DOMContentLoaded', () => {
         closeResultsBtn: document.getElementById('close-results'),
         customInstructionsBar: document.getElementById('custom-instructions-bar'),
         emptyThenGenerate: document.getElementById('empty-then-generate'),
+        additionalInstructions: document.getElementById('additional-instructions'),
     };
 
     let selectedFile = null;
     elements.addStyleBtn = document.getElementById('add-style-btn'); 
     elements.styleGrid = document.querySelector('.style-grid');
     const uploadBtnTrigger = document.getElementById('upload-btn-trigger');
+
+    // Cache badge elements to avoid repeated DOM queries
+    const beforeBadge = document.querySelector('.badge-before-static');
+    const afterBadge = document.querySelector('.badge-after-static');
+
+    // Helper function to safely set image src with cleanup of previous handlers
+    function setImageSrcWithCleanup(imgElement, newSrc, onloadHandler) {
+        if (!imgElement) return;
+        // Clear previous onload handler to prevent accumulation
+        imgElement.onload = null;
+        imgElement.onerror = null;
+        // Set new src
+        imgElement.src = newSrc;
+        // Set new onload handler if provided
+        if (onloadHandler) {
+            imgElement.onload = onloadHandler;
+        }
+    }
 
     // --- Initialization ---
     Editor.initSlider(elements.comparisonBox, elements.overlay, elements.slider);
@@ -88,10 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.customInstructionsBar.classList.add('hidden');
         }
 
-        // 3. Hide Static Badges
-        const beforeBadge = document.querySelector('.badge-before-static');
-        const afterBadge = document.querySelector('.badge-after-static');
-        
+        // 3. Hide Static Badges (using cached elements)
         if (beforeBadge) {
             beforeBadge.classList.add('hidden');
             beforeBadge.style.display = 'none';
@@ -131,10 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.customInstructionsBar.classList.remove('hidden');
         }
 
-        // 3. Show Static Badges
-        const beforeBadge = document.querySelector('.badge-before-static');
-        const afterBadge = document.querySelector('.badge-after-static');
-
+        // 3. Show Static Badges (using cached elements)
         if (beforeBadge) {
             beforeBadge.classList.remove('hidden');
             beforeBadge.style.display = 'block';
@@ -216,9 +227,20 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Display uploaded image immediately in the center
             const imageDataUrl = ev.target.result;
-            elements.baseImg.src = imageDataUrl;
-            elements.finalImg.src = imageDataUrl; // Show same image initially
-            elements.storeOriginal.src = imageDataUrl;
+            
+            // Use helper function to set image src with cleanup
+            setImageSrcWithCleanup(elements.baseImg, imageDataUrl, () => {
+                Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+                // Ensure comparison elements stay hidden after image loads (slider and badges)
+                hideComparisonElements();
+                // Show custom instructions bar after image is uploaded
+                if (elements.customInstructionsBar) {
+                    elements.customInstructionsBar.classList.remove('hidden');
+                }
+            });
+            
+            setImageSrcWithCleanup(elements.finalImg, imageDataUrl); // Show same image initially
+            setImageSrcWithCleanup(elements.storeOriginal, imageDataUrl);
             
             // Show result view with uploaded image
             elements.resultView.classList.remove('hidden');
@@ -232,17 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     elements.customInstructionsBar.classList.remove('hidden');
                 }
             });
-            
-            // Wait for image to load, then sync sizes
-            elements.baseImg.onload = () => {
-                Editor.syncImageSizes(elements.baseImg, elements.finalImg);
-                // Ensure comparison elements stay hidden after image loads (slider and badges)
-                hideComparisonElements();
-                // Show custom instructions bar after image is uploaded
-                if (elements.customInstructionsBar) {
-                    elements.customInstructionsBar.classList.remove('hidden');
-                }
-            };
             
             elements.processBtn.disabled = false;
             
@@ -289,6 +300,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ? "Emptying room, then generating new design..." 
             : "Generating new interior...";
         
+        // Get additional instructions if provided
+        const additionalInstructions = elements.additionalInstructions 
+            ? elements.additionalInstructions.value.trim() 
+            : '';
+        
         UI.toggleLoading(true, elements, loadingMessage);
         
         try {
@@ -296,15 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedFile, 
                 elements.styleInput.value, 
                 elements.roomType.value,
-                emptyThenGenerate
+                emptyThenGenerate,
+                additionalInstructions
             );
             
-            elements.storeOriginal.src = data.original_image;
-            elements.baseImg.src = data.original_image;
-            elements.finalImg.src = data.final_image;
-            
-            UI.updateStyleCardThumbnail(data.final_image);
-
             // Wait for both images to load
             let baseLoaded = false;
             let finalLoaded = false;
@@ -333,51 +344,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
             
-            elements.baseImg.onload = () => {
+            // Use helper function to set image src with cleanup and proper handlers
+            setImageSrcWithCleanup(elements.storeOriginal, data.original_image);
+            setImageSrcWithCleanup(elements.baseImg, data.original_image, () => {
                 baseLoaded = true;
                 checkBothLoaded();
-            };
-            
-            elements.finalImg.onload = () => {
+            });
+            setImageSrcWithCleanup(elements.finalImg, data.final_image, () => {
                 finalLoaded = true;
                 checkBothLoaded();
-            };
+            });
+            
+            UI.updateStyleCardThumbnail(data.final_image);
         } catch (error) {
             alert(error.message);
             UI.toggleLoading(false, elements);
         }
     });
 
-    // 4. Refine Design (from Advanced Options)
-    if (elements.refineBtn) {
-        elements.refineBtn.addEventListener('click', async () => {
-            const prompt = elements.refineInput.value.trim();
-            if (!prompt) return;
-            
-            UI.toggleLoading(true, elements, "Refining details...");
-            try {
-                const data = await API.refineImage(elements.finalImg.src, prompt);
-                elements.finalImg.src = data.refined_image;
-                elements.refineInput.value = '';
-                
-                elements.finalImg.onload = () => {
-                    UI.toggleLoading(false, elements);
-                    elements.resultView.classList.remove('hidden');
-                    
-                    // --- REPLACEMENT: Use helper function ---
-                    showComparisonElements();
-                    
-                    setTimeout(() => {
-                        Editor.syncImageSizes(elements.baseImg, elements.finalImg);
-                    }, 100);
-                };
-            } catch (error) {
-                alert(error.message);
-                UI.toggleLoading(false, elements);
-                elements.resultView.classList.remove('hidden');
-            }
-        });
-    }
+    // 4. Refine Design functionality removed - now handled by custom instructions bar
 
     // 5. Apply Custom Instructions (from typing bar)
     if (elements.applyInstructionsBtn && elements.customInstructionsInput) {
@@ -414,9 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             try {
                 const data = await API.refineImage(elements.finalImg.src, prompt);
-                elements.finalImg.src = data.refined_image;
                 
-                elements.finalImg.onload = () => {
+                // Use helper function to set image src with cleanup and proper handler
+                setImageSrcWithCleanup(elements.finalImg, data.refined_image, () => {
                     UI.toggleLoading(false, elements);
                     elements.resultView.classList.remove('hidden');
                     
@@ -429,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => {
                         Editor.syncImageSizes(elements.baseImg, elements.finalImg);
                     }, 100);
-                };
+                });
             } catch (error) {
                 alert(error.message || 'Failed to apply custom instructions');
                 UI.toggleLoading(false, elements);
@@ -604,11 +589,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Window Resize Handler
+    // Window Resize Handler with debouncing for performance
+    let resizeTimeout;
     window.addEventListener('resize', () => {
-        if (elements.resultView && !elements.resultView.classList.contains('hidden')) {
-            // Recalculate base image width when window resizes
-            Editor.syncImageSizes(elements.baseImg, elements.finalImg);
-        }
+        // Clear previous timeout to debounce resize events
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (elements.resultView && !elements.resultView.classList.contains('hidden')) {
+                // Recalculate base image width when window resizes
+                Editor.syncImageSizes(elements.baseImg, elements.finalImg);
+            }
+        }, 150); // Wait 150ms after last resize event
     });
 });

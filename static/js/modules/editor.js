@@ -4,8 +4,19 @@ let isDrawing = false;
 let startX = 0, startY = 0;
 let isSearchMode = false;
 
+// Store event listener references for cleanup
+let sliderListeners = {
+    mouseup: null,
+    mousemove: null,
+    touchend: null,
+    touchmove: null
+};
+
 // --- Slider Logic ---
 export function initSlider(box, overlay, sliderHandle) {
+    // Clean up previous listeners if they exist
+    cleanupSliderListeners();
+
     let active = false;
 
     const move = (e) => {
@@ -22,15 +33,42 @@ export function initSlider(box, overlay, sliderHandle) {
         sliderHandle.style.left = x + "px";
     };
 
+    const handleMouseUp = () => active = false;
+    const handleTouchEnd = () => active = false;
+
     // Mouse
     box.addEventListener('mousedown', () => active = true);
-    window.addEventListener('mouseup', () => active = false);
-    window.addEventListener('mousemove', move);
+    sliderListeners.mouseup = handleMouseUp;
+    sliderListeners.mousemove = move;
+    window.addEventListener('mouseup', sliderListeners.mouseup);
+    window.addEventListener('mousemove', sliderListeners.mousemove);
 
     // Touch
     box.addEventListener('touchstart', () => active = true);
-    window.addEventListener('touchend', () => active = false);
-    window.addEventListener('touchmove', move);
+    sliderListeners.touchend = handleTouchEnd;
+    sliderListeners.touchmove = move;
+    window.addEventListener('touchend', sliderListeners.touchend);
+    window.addEventListener('touchmove', sliderListeners.touchmove);
+}
+
+// Cleanup function to remove event listeners
+export function cleanupSliderListeners() {
+    if (sliderListeners.mouseup) {
+        window.removeEventListener('mouseup', sliderListeners.mouseup);
+        sliderListeners.mouseup = null;
+    }
+    if (sliderListeners.mousemove) {
+        window.removeEventListener('mousemove', sliderListeners.mousemove);
+        sliderListeners.mousemove = null;
+    }
+    if (sliderListeners.touchend) {
+        window.removeEventListener('touchend', sliderListeners.touchend);
+        sliderListeners.touchend = null;
+    }
+    if (sliderListeners.touchmove) {
+        window.removeEventListener('touchmove', sliderListeners.touchmove);
+        sliderListeners.touchmove = null;
+    }
 }
 
 export function syncImageSizes(baseImg, finalImg) {
