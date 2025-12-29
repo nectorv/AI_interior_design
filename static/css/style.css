@@ -625,7 +625,7 @@ h3 {
     height: 20px;
     border-radius: 50%;
     font-size: 12px;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 2;
