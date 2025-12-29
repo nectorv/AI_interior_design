@@ -130,6 +130,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return this.states[this.currentIndex];
             }
             return null;
+        },
+        
+        getAllStates() {
+            return this.states;
+        },
+        
+        jumpToState(index) {
+            if (index >= 0 && index < this.states.length) {
+                this.currentIndex = index;
+                this.updateButtons();
+                return this.states[index];
+            }
+            return null;
         }
     };
 
@@ -170,6 +183,75 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.baseImage && state.baseImage !== state.finalImage) {
             setImageSrcWithCleanup(elements.baseImg, state.baseImage);
             setImageSrcWithCleanup(elements.storeOriginal, state.baseImage);
+        }
+    }
+
+    // Function to render history panel
+    function renderHistoryPanel() {
+        const historyGrid = document.getElementById('history-grid');
+        if (!historyGrid) return;
+        
+        const states = imageHistory.getAllStates();
+        const currentIndex = imageHistory.currentIndex;
+        
+        if (states.length === 0) {
+            historyGrid.innerHTML = '<p class="history-empty">No history available. Start designing to see your history!</p>';
+            return;
+        }
+        
+        historyGrid.innerHTML = states.map((state, index) => {
+            const isActive = index === currentIndex;
+            const label = index === 0 
+                ? 'Original' 
+                : index === states.length - 1 
+                    ? 'Latest' 
+                    : `Step ${index + 1}`;
+            
+            return `
+                <div class="history-item ${isActive ? 'active' : ''}" data-index="${index}">
+                    <div class="history-item-thumbnail">
+                        <img src="${state.finalImage}" alt="${label}" loading="lazy">
+                        ${isActive ? '<div class="history-item-badge">Current</div>' : ''}
+                    </div>
+                    <div class="history-item-label">${label}</div>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click handlers to history items
+        historyGrid.querySelectorAll('.history-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const index = parseInt(item.dataset.index);
+                const state = imageHistory.jumpToState(index);
+                if (state) {
+                    restoreImageState(state);
+                    // Re-render to update active state
+                    renderHistoryPanel();
+                    // Close modal after selection
+                    closeHistoryModal();
+                }
+            });
+        });
+    }
+
+    // Function to show history modal
+    function showHistoryModal() {
+        const modal = document.getElementById('history-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            renderHistoryPanel();
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    // Function to close history modal
+    function closeHistoryModal() {
+        const modal = document.getElementById('history-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            // Restore body scroll
+            document.body.style.overflow = '';
         }
     }
 
@@ -574,8 +656,30 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (historyBtn) {
         historyBtn.addEventListener('click', () => {
-            console.log('History feature not yet implemented');
-            // Placeholder for future implementation
+            showHistoryModal();
+        });
+    }
+
+    // Close history modal handlers
+    const closeHistoryBtn = document.getElementById('close-history');
+    const historyModal = document.getElementById('history-modal');
+    
+    if (closeHistoryBtn) {
+        closeHistoryBtn.addEventListener('click', closeHistoryModal);
+    }
+    
+    if (historyModal) {
+        // Close on overlay click
+        const overlay = historyModal.querySelector('.history-modal-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', closeHistoryModal);
+        }
+        
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !historyModal.classList.contains('hidden')) {
+                closeHistoryModal();
+            }
         });
     }
     

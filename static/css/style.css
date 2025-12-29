@@ -1117,3 +1117,204 @@ h3 {
     scrollbar-width: thin;
     scrollbar-color: #d1d5db transparent;
 }
+
+/* =========================================
+   HISTORY MODAL
+   ========================================= */
+.history-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.history-modal.hidden {
+    display: none;
+}
+
+.history-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.history-modal:not(.hidden) .history-modal-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.history-modal-content {
+    position: relative;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    pointer-events: auto;
+}
+
+.history-modal:not(.hidden) .history-modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.history-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+}
+
+.history-header h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.history-header h4::before {
+    content: '🕐';
+    font-size: 1.3rem;
+}
+
+.close-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: var(--text-main);
+    background: rgba(217, 70, 239, 0.1);
+    transform: scale(1.1);
+}
+
+.history-grid {
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    flex: 1;
+}
+
+.history-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    padding: 3rem 1rem;
+    font-size: 0.95rem;
+}
+
+.history-item {
+    background: white;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.history-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(217, 70, 239, 0.2);
+    border-color: var(--primary-color);
+}
+
+.history-item.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.1), 0 8px 24px rgba(217, 70, 239, 0.2);
+}
+
+.history-item-thumbnail {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #f3f4f6;
+}
+
+.history-item-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.history-item:hover .history-item-thumbnail img {
+    transform: scale(1.05);
+}
+
+.history-item-label {
+    padding: 0.75rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-main);
+    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+    border-top: 1px solid var(--border-color);
+}
+
+.history-item.active .history-item-label {
+    background: var(--primary-gradient);
+    color: white;
+    border-top-color: transparent;
+}
+
+.history-item-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(4px);
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.history-item.active .history-item-badge {
+    background: white;
+    color: var(--primary-color);
+}
