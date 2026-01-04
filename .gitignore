@@ -1,5 +1,10 @@
 google_dataset/product_images
 code_context.txt
+DOCKER_SPACE_MANAGEMENT.md
+docker-build.sh
+docker-cleanup.sh
+Dockerfile.optimized
+HOW_TO_RUN.md
 pack_context.py
 .venv
 .env

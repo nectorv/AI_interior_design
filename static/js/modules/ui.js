@@ -27,12 +27,39 @@ export function toggleLoading(isLoading, elements, text = "") {
                 elements.loadingBackground.classList.remove('hidden');
             }
         }
+        
+        // Create or show full-screen overlay to block all clicks
+        let clickBlocker = document.getElementById('loading-click-blocker');
+        if (!clickBlocker) {
+            clickBlocker = document.createElement('div');
+            clickBlocker.id = 'loading-click-blocker';
+            clickBlocker.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 9999;
+                background: transparent;
+                pointer-events: all;
+                cursor: wait;
+            `;
+            document.body.appendChild(clickBlocker);
+        } else {
+            clickBlocker.style.display = 'block';
+        }
     } else {
         elements.loadingMsg.classList.add('hidden');
         
         // Hide background image when loading ends
         if (elements.loadingBackground) {
             elements.loadingBackground.classList.add('hidden');
+        }
+        
+        // Hide and remove click blocker overlay
+        const clickBlocker = document.getElementById('loading-click-blocker');
+        if (clickBlocker) {
+            clickBlocker.style.display = 'none';
         }
     }
     elements.loadingText.textContent = text;
