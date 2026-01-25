@@ -849,7 +849,7 @@ h3 {
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
     z-index: 25;
-    max-height: 80vh;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -971,26 +971,26 @@ h3 {
 }
 
 .product-content {
-    padding: 10px 12px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     flex: 0 0 auto;
     background: white;
 }
 
 .product-title {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.2;
     color: var(--text-main);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-height: 2.1em;
+    min-height: 1.8em;
 }
 
 .product-card:hover .product-title {
@@ -1006,15 +1006,15 @@ h3 {
 .product-price {
     color: var(--primary-color);
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     letter-spacing: -0.01em;
 }
 
 .product-source {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: var(--text-muted);
     background: #f9fafb;
-    padding: 3px 6px;
+    padding: 2px 5px;
     border-radius: 4px;
     width: fit-content;
     max-width: 100%;
