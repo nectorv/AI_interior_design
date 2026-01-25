@@ -2,7 +2,5 @@ google-genai
 Pillow
 python-dotenv
 Flask
-torch
 numpy
-transformers
 pandas

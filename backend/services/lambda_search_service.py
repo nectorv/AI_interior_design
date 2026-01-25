@@ -127,3 +127,137 @@ class LambdaCLIPService:
         t = threading.Thread(target=_warm, daemon=True)
         t.start()
         return True
+
+
+class LambdaFurnitureSearcher:
+    """Adapter implementing the original `FurnitureSearcher` loading logic.
+
+    Loads CSV metadata from `Config.CSV_FILE` and embeddings from
+    `Config.EMBEDDINGS_FILE` (pickle) into a stacked numpy matrix to
+    support similarity search via the remote `LambdaCLIPService`.
+    """
+
+    def __init__(self, lambda_service: LambdaCLIPService | None = None):
+        logger.info("Initializing Search Engine (Lambda adapter)...")
+        self.clip_service = lambda_service or LambdaCLIPService()
+
+        # Defaults if loading fails
+        self.df_data = None
+        self.df_embeddings = None
+        self.dataset_embeddings = None
+        self.product_lookup = {}
+
+        try:
+            import os as _os
+            import numpy as _np
+            import pandas as _pd
+
+            # 1. Check files exist
+            if not _os.path.exists(Config.CSV_FILE):
+                logger.error("CSV file not found: %s", Config.CSV_FILE)
+                self.df_data = None
+                return
+
+            if not _os.path.exists(Config.EMBEDDINGS_FILE):
+                logger.error("Embeddings file not found: %s", Config.EMBEDDINGS_FILE)
+                self.df_data = None
+                return
+
+            # 2. Load metadata CSV
+            logger.info("Loading CSV data from: %s", Config.CSV_FILE)
+            self.df_data = _pd.read_csv(Config.CSV_FILE)
+            if 'clean_id' in self.df_data.columns:
+                self.df_data['clean_id'] = self.df_data['clean_id'].astype(str)
+
+            # Create lookup by clean_id
+            self.product_lookup = self.df_data.set_index('clean_id').to_dict('index')
+            logger.info("Loaded %d products from CSV", len(self.df_data))
+
+            # 3. Load embeddings pickle (expected to be a DataFrame with 'embedding' and 'clean_id')
+            logger.info("Loading embeddings from: %s", Config.EMBEDDINGS_FILE)
+            self.df_embeddings = _pd.read_pickle(Config.EMBEDDINGS_FILE)
+
+            if 'clean_id' in self.df_embeddings.columns:
+                self.df_embeddings['clean_id'] = self.df_embeddings['clean_id'].astype(str)
+
+            # Stack embeddings into matrix
+            logger.info("Stacking embeddings...")
+            raw_embeddings = _np.vstack(self.df_embeddings['embedding'].values)
+            self.dataset_embeddings = raw_embeddings.astype(_np.float32)
+            logger.info("Created embedding matrix with shape: %s", self.dataset_embeddings.shape)
+
+            # 4. Ensure CLIP service exists
+            logger.info("Initializing Lambda CLIP service... (remote)")
+            # self.clip_service already set
+
+            logger.info("Search Engine Loaded successfully.")
+
+        except Exception as e:
+            logger.exception("CRITICAL ERROR loading search database: %s", str(e))
+            self.df_data = None
+            self.df_embeddings = None
+            self.clip_service = None
+            self.dataset_embeddings = None
+
+    def search(self, image_input, top_k: int = 4):
+        """Search for similar furniture items using remote CLIP embedding."""
+        if self.df_data is None:
+            logger.warning("Search service: Product database not loaded. Cannot perform search.")
+            raise RuntimeError("Embeddings or dataset not loaded; search unavailable")
+
+        if self.clip_service is None:
+            logger.warning("Search service: CLIP service not initialized. Ensure LAMBDA_CLIP_URL is configured.")
+            raise RuntimeError("CLIP service not initialized")
+
+        try:
+            # Normalize input to PIL Image
+            if isinstance(image_input, str):
+                image = Image.open(image_input).convert('RGB')
+            else:
+                image = image_input.convert('RGB')
+
+            # Generate embedding
+            logger.info("Generating CLIP embedding via Lambda CLIP")
+            query_embedding = self.clip_service.get_image_embedding(image)
+
+            import numpy as _np
+
+            query_embedding = _np.array(query_embedding, dtype=_np.float32)
+            query_embedding = query_embedding / (_np.linalg.norm(query_embedding) + 1e-8)
+
+            # Normalize dataset embeddings
+            dataset_embeddings_normalized = self.dataset_embeddings / (
+                _np.linalg.norm(self.dataset_embeddings, axis=1, keepdims=True) + 1e-8
+            )
+
+            similarity_scores = _np.dot(dataset_embeddings_normalized, query_embedding)
+
+            top_indices = _np.argsort(similarity_scores)[::-1][:top_k]
+
+            results = []
+            for idx in top_indices:
+                try:
+                    clean_id = self.df_embeddings.iloc[int(idx)]['clean_id']
+                    item = self.product_lookup.get(clean_id)
+                    score = float(similarity_scores[idx])
+
+                    if item:
+                        search_query = f"{item.get('title', '')} {item.get('source', '')}"
+                        results.append({
+                            'score': score,
+                            'title': item.get('title', 'Unknown Item'),
+                            'price': str(item.get('price', 'N/A')),
+                            'source': item.get('source', ''),
+                            'image_url': item.get('image_url', ''),
+                            'search_query': search_query
+                        })
+                except Exception:
+                    logger.exception("Error retrieving item at index %s", idx)
+                    continue
+
+            logger.info("Found %d results for furniture search", len(results))
+            return results
+
+        except Exception as e:
+            logger.exception("Error during furniture search: %s", str(e))
+            return []

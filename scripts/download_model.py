@@ -2,7 +2,6 @@
 """Pre-download CLIP model for offline use."""
 import logging
 import sys
-from transformers import CLIPModel, CLIPProcessor
 from backend.core.config import Config
 
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +10,14 @@ logger = logging.getLogger(__name__)
 def download_model():
     """Download and cache the CLIP model."""
     try:
+        # Import transformers lazily to avoid requiring the dependency
+        # unless the user intentionally runs this script.
+        try:
+            from transformers import CLIPModel, CLIPProcessor
+        except Exception:
+            logger.error("transformers library not available; model download disabled")
+            return False
+
         logger.info("Downloading CLIP model: %s", Config.MODEL_ID)
         logger.info("This may take a few minutes...")
         

@@ -204,7 +204,12 @@ def search_furniture():
 
         # Search for similar furniture
         _, search_service = _get_services()
-        results = search_service.search(cropped_img, top_k=4)
+        try:
+            results = search_service.search(cropped_img, top_k=4)
+        except RuntimeError as e:
+            # Known condition when embeddings or dataset are not loaded
+            logger.warning("Search unavailable: %s", str(e))
+            return jsonify({'error': 'Search unavailable: embeddings or dataset not loaded'}), 503
 
         return jsonify({'results': results})
 
