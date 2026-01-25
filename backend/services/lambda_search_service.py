@@ -8,6 +8,8 @@ import logging
 from typing import List
 
 import requests
+import threading
+import time
 from PIL import Image
 
 from backend.core.config import Config
@@ -21,6 +23,9 @@ class LambdaCLIPService:
     def __init__(self, url: str | None = None, timeout: int = 30):
         self.url = url or Config.LAMBDA_CLIP_URL
         self.timeout = timeout
+        # warm control
+        self._last_warm = 0.0
+        self._warm_interval = 60  # 1 minute default
         if not self.url:
             logger.warning("Lambda CLIP URL not configured; LambdaCLIPService will be disabled")
 
@@ -89,3 +94,36 @@ class LambdaCLIPService:
         except requests.RequestException as e:
             logger.exception("HTTP error calling Lambda CLIP: %s", str(e))
             raise
+
+    def warm_async(self, force: bool = False) -> bool:
+        """Asynchronously send a small request to the Lambda to reduce cold-start latency.
+
+        Returns True if a warm request was scheduled, False if skipped due to interval.
+        """
+        now = time.time()
+        if not force and (now - self._last_warm) < self._warm_interval:
+            return False
+
+        def _warm():
+            try:
+                # Create a minimal 1x1 JPEG
+                img = Image.new("RGB", (1, 1), color=(255, 255, 255))
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG")
+                data = buf.getvalue()
+
+                headers = {"Content-Type": "application/octet-stream"}
+                resp = requests.post(self.url, data=data, headers=headers, timeout=max(5, self.timeout))
+                resp.raise_for_status()
+                logger.info("Lambda CLIP warm ping successful (status=%s)", resp.status_code)
+            except Exception as e:
+                logger.debug("Lambda CLIP warm ping failed: %s", str(e))
+            finally:
+                try:
+                    self._last_warm = time.time()
+                except Exception:
+                    pass
+
+        t = threading.Thread(target=_warm, daemon=True)
+        t.start()
+        return True
