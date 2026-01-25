@@ -13,6 +13,8 @@ class Config:
     
     # API Keys
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+    # Lambda CLIP endpoint (optional)
+    LAMBDA_CLIP_URL = os.getenv("LAMBDA_CLIP_URL", "https://2ck2fv7t6r3okbukehsmpnzd6y0uqnrz.lambda-url.eu-north-1.on.aws/")
     
     # Flask Configuration
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
