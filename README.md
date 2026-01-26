@@ -1,124 +1,90 @@
 # AI Interior Designer
 
-A professional AI-powered interior design application that allows users to redesign rooms using AI image generation and furniture search capabilities.
+A personal project that uses AI to modify interior design spaces. Upload a photo of your room and redesign it in your chosen style.
 
-## Project Structure
+## 🎨 Live Demo
 
-```
-ai-interior-designer/
-├── backend/                    # Python backend application
-│   ├── api/                    # API layer (routes & request handling)
-│   │   ├── __init__.py
-│   │   └── routes.py           # All Flask route handlers
-│   ├── services/               # Business logic layer
-│   │   ├── __init__.py
-│   │   ├── ai_service.py       # Gemini AI service
-│   │   ├── search_service.py   # Furniture search service (CLIP)
-│   │   └── image_service.py    # Image processing utilities
-│   ├── core/                   # Core domain logic
-│   │   ├── __init__.py
-│   │   ├── config.py           # Configuration management
-│   │   └── prompts.py           # Prompt templates
-│   ├── utils/                  # Utility functions
-│   │   ├── __init__.py
-│   │   └── image_utils.py      # Image encoding/decoding
-│   └── app.py                  # Flask application factory
-│
-├── static/                     # Frontend static files
-│   ├── css/
-│   │   └── style.css
-│   ├── js/
-│   │   ├── main.js            # Application entry point
-│   │   └── modules/
-│   │       ├── api.js         # API communication
-│   │       ├── ui.js          # UI manipulation
-│   │       └── editor.js      # Image editing logic
-│   └── assets/                # Images, fonts, etc.
-│
-├── templates/                  # HTML templates
-│   └── index.html
-│
-├── scripts/                    # Utility scripts
-│   └── pack_context.py
-│
-├── tests/                      # Test suite
-│   └── __init__.py
-│
-├── google_dataset/             # Dataset files (CSV, embeddings)
-├── outputs/                    # Generated outputs
-├── temp/                       # Temporary files
-│
-├── run.py                      # Application entry point
-├── app.py                      # Legacy entry point (backward compatibility)
-├── requirements.txt
-└── README.md
-```
+**Try the live demo here:** https://ap2bcuij5s.eu-central-1.awsapprunner.com/
 
-## Architecture
+Simply upload a room photo, select a design style, and watch the magic happen!
 
-### Backend Structure
+The live demo features a Qdrant vector database with a custom dataset of over 65,000 furniture items, powered by a Lambda function running a fine-tuned CLIP ViT-32 model for intelligent furniture search.
 
-The backend follows a **layered architecture**:
+## 🛠 Tech Stack
 
-1. **API Layer** (`backend/api/`): Handles HTTP requests and responses
-2. **Service Layer** (`backend/services/`): Contains business logic
-3. **Core Layer** (`backend/core/`): Domain logic (prompts, configuration)
-4. **Utils Layer** (`backend/utils/`): Reusable utility functions
+### Backend
+- **Flask** - Python web framework
+- **Google Gemini API** - AI image generation
+- **Pillow** - Image processing
+- **Qdrant** - Vector database for furniture search
+- **Docker** - Containerization
 
-### Design Principles
+### Frontend
+- **HTML/CSS/JavaScript** - Vanilla JavaScript (no framework)
 
-- **Separation of Concerns**: Clear boundaries between layers
-- **Single Responsibility**: Each module has one clear purpose
-- **Modularity**: Easy to add new features or modify existing ones
-- **Testability**: Services can be tested independently
+## 🚀 Getting Started
 
-## Setup
+### Prerequisites
 
-1. Install dependencies:
+- Python 3.10+
+- Docker
+- Google Gemini API Key
+
+### Environment Variables
+
+Create a `.env` file with the following variables:
+
 ```bash
-pip install -r requirements.txt
+GOOGLE_API_KEY=your-google-gemini-api-key
+QDRANT_URL=http://localhost:6333  # Optional
+QDRANT_API_KEY=your-qdrant-api-key  # Optional
+QDRANT_COLLECTION_NAME=furniture_items
+FLASK_ENV=development
 ```
 
-2. Set up environment variables:
-Create a `.env` file with:
-```
-GOOGLE_API_KEY=your_api_key_here
-```
+### Installation
 
-3. Run the application:
 ```bash
-python run.py
+# Clone the repository
+git clone <repository-url>
+cd AI_interior_design
+
+# Build and start the application
+docker-compose up --build
+
+# Application will be available at http://localhost:5000
 ```
 
-Or use the legacy entry point:
-```bash
-python app.py
+## 🏗 Project Structure
+
+```
+AI_interior_design/
+├── backend/
+│   ├── api/              # Flask routes and endpoints
+│   ├── core/             # Configuration and prompts
+│   ├── services/         # AI and image services
+│   └── utils/            # Image processing utilities
+├── templates/            # HTML templates
+├── static/
+│   ├── css/              # Styling
+│   └── js/               # Frontend JavaScript
+├── Dockerfile            # Container configuration
+├── docker-compose.yml    # Multi-container setup
+├── requirements.txt      # Python dependencies
+└── run.py                # Application entry point
 ```
 
-## API Endpoints
+### Deploy with AWS App Runner
 
-- `GET /` - Main application page
-- `POST /api/redesign` - Redesign a room image
-- `POST /api/refine` - Refine an existing design
-- `POST /api/search-furniture` - Search for furniture based on image crop
+The application is ready to be deployed with AWS App Runner:
 
-## Development
+1. Connect your ECR repository to App Runner
+2. Set environment variables in the App Runner configuration
+3. Deploy with automatic scaling and health checks
 
-### Adding New Features
+## 🎯 Future Enhancements
 
-1. **New API Endpoint**: Add to `backend/api/routes.py`
-2. **New Service**: Create in `backend/services/`
-3. **New Utility**: Add to `backend/utils/`
-4. **Configuration**: Update `backend/core/config.py`
-
-### Testing
-
-Tests should be placed in the `tests/` directory following the same structure as the backend.
-
-## Technologies
-
-- **Backend**: Python, Flask
-- **AI**: Google Gemini API
-- **Search**: CLIP (Hugging Face Transformers)
-- **Frontend**: Vanilla JavaScript, HTML, CSS
-
+- [ ] User authentication and design history
+- [ ] Design sharing and collaboration
+- [ ] Mobile app (iOS/Android)
+- [ ] Multi-room project support

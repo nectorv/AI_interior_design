@@ -1,9 +1,0 @@
-Host cs.redesigned-adventure-4jjvqwpj4xp935jr4.main
-	User codespace
-	ProxyCommand /usr/bin/gh cs ssh -c redesigned-adventure-4jjvqwpj4xp935jr4 --stdio -- -i /home/codespace/.ssh/codespaces.auto
-	UserKnownHostsFile=/dev/null
-	StrictHostKeyChecking no
-	LogLevel quiet
-	ControlMaster auto
-	IdentityFile /home/codespace/.ssh/codespaces.auto
-
