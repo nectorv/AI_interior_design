@@ -4,3 +4,4 @@ python-dotenv
 Flask
 numpy
 pandas
+qdrant-client

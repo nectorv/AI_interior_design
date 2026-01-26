@@ -1,5 +1,6 @@
 google_dataset/product_images
 code_context.txt
+context.txt
 DOCKER_SPACE_MANAGEMENT.md
 docker-build.sh
 docker-cleanup.sh
@@ -9,4 +10,3 @@ pack_context.py
 .venv
 .env
 __pycache__
-code_context.txt

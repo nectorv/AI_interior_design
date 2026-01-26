@@ -25,7 +25,7 @@ class LambdaCLIPService:
         self.timeout = timeout
         # warm control
         self._last_warm = 0.0
-        self._warm_interval = 60  # 1 minute default
+        self._warm_interval = 20  # 20 seconds default
         if not self.url:
             logger.warning("Lambda CLIP URL not configured; LambdaCLIPService will be disabled")
 
@@ -130,80 +130,85 @@ class LambdaCLIPService:
 
 
 class LambdaFurnitureSearcher:
-    """Adapter implementing the original `FurnitureSearcher` loading logic.
+    """Adapter implementing furniture search using Qdrant vector database.
 
-    Loads CSV metadata from `Config.CSV_FILE` and embeddings from
-    `Config.EMBEDDINGS_FILE` (pickle) into a stacked numpy matrix to
-    support similarity search via the remote `LambdaCLIPService`.
+    Loads image embeddings and metadata from a remote Qdrant instance
+    to support similarity search via the remote `LambdaCLIPService`.
     """
 
     def __init__(self, lambda_service: LambdaCLIPService | None = None):
-        logger.info("Initializing Search Engine (Lambda adapter)...")
+        logger.info("Initializing Search Engine (Qdrant adapter)...")
         self.clip_service = lambda_service or LambdaCLIPService()
 
-        # Defaults if loading fails
-        self.df_data = None
-        self.df_embeddings = None
-        self.dataset_embeddings = None
-        self.product_lookup = {}
+        # Defaults if initialization fails
+        self.qdrant_client = None
+        self.is_initialized = False
 
         try:
-            import os as _os
-            import numpy as _np
-            import pandas as _pd
+            from qdrant_client import QdrantClient
+            from qdrant_client.models import Distance, VectorParams
 
-            # 1. Check files exist
-            if not _os.path.exists(Config.CSV_FILE):
-                logger.error("CSV file not found: %s", Config.CSV_FILE)
-                self.df_data = None
+            # Validate configuration
+            if not Config.QDRANT_URL:
+                logger.error("QDRANT_URL not configured")
                 return
 
-            if not _os.path.exists(Config.EMBEDDINGS_FILE):
-                logger.error("Embeddings file not found: %s", Config.EMBEDDINGS_FILE)
-                self.df_data = None
+            if not Config.QDRANT_API_KEY:
+                logger.error("QDRANT_API_KEY not configured")
                 return
 
-            # 2. Load metadata CSV
-            logger.info("Loading CSV data from: %s", Config.CSV_FILE)
-            self.df_data = _pd.read_csv(Config.CSV_FILE)
-            if 'clean_id' in self.df_data.columns:
-                self.df_data['clean_id'] = self.df_data['clean_id'].astype(str)
+            # Initialize Qdrant client
+            logger.info("Connecting to Qdrant at: %s", Config.QDRANT_URL)
+            self.qdrant_client = QdrantClient(
+                url=Config.QDRANT_URL,
+                api_key=Config.QDRANT_API_KEY,
+                timeout=30,  # Increase timeout to 30 seconds
+                prefer_grpc=False
+                
+            )
 
-            # Create lookup by clean_id
-            self.product_lookup = self.df_data.set_index('clean_id').to_dict('index')
-            logger.info("Loaded %d products from CSV", len(self.df_data))
+            # Verify connection and collection exists
+            collections = self.qdrant_client.get_collections()
+            collection_names = [col.name for col in collections.collections]
 
-            # 3. Load embeddings pickle (expected to be a DataFrame with 'embedding' and 'clean_id')
-            logger.info("Loading embeddings from: %s", Config.EMBEDDINGS_FILE)
-            self.df_embeddings = _pd.read_pickle(Config.EMBEDDINGS_FILE)
+            if Config.QDRANT_COLLECTION_NAME not in collection_names:
+                logger.error(
+                    "Collection '%s' not found in Qdrant. Available collections: %s",
+                    Config.QDRANT_COLLECTION_NAME,
+                    collection_names
+                )
+                return
 
-            if 'clean_id' in self.df_embeddings.columns:
-                self.df_embeddings['clean_id'] = self.df_embeddings['clean_id'].astype(str)
+            # Get collection info to verify it has embeddings
+            collection_info = self.qdrant_client.get_collection(Config.QDRANT_COLLECTION_NAME)
+            logger.info(
+                "Successfully connected to collection '%s' with %d points",
+                Config.QDRANT_COLLECTION_NAME,
+                collection_info.points_count
+            )
 
-            # Stack embeddings into matrix
-            logger.info("Stacking embeddings...")
-            raw_embeddings = _np.vstack(self.df_embeddings['embedding'].values)
-            self.dataset_embeddings = raw_embeddings.astype(_np.float32)
-            logger.info("Created embedding matrix with shape: %s", self.dataset_embeddings.shape)
-
-            # 4. Ensure CLIP service exists
-            logger.info("Initializing Lambda CLIP service... (remote)")
-            # self.clip_service already set
-
-            logger.info("Search Engine Loaded successfully.")
+            self.is_initialized = True
+            logger.info("Search Engine initialized successfully with Qdrant.")
 
         except Exception as e:
-            logger.exception("CRITICAL ERROR loading search database: %s", str(e))
-            self.df_data = None
-            self.df_embeddings = None
-            self.clip_service = None
-            self.dataset_embeddings = None
+            logger.exception("CRITICAL ERROR initializing Qdrant search: %s", str(e))
+            self.qdrant_client = None
+            self.is_initialized = False
 
     def search(self, image_input, top_k: int = 4):
-        """Search for similar furniture items using remote CLIP embedding."""
-        if self.df_data is None:
-            logger.warning("Search service: Product database not loaded. Cannot perform search.")
-            raise RuntimeError("Embeddings or dataset not loaded; search unavailable")
+        """Search for similar furniture items using remote CLIP embedding and Qdrant.
+        
+        Args:
+            image_input: PIL Image or file path
+            top_k: Number of results to return
+            
+        Returns:
+            list: Array of furniture items with metadata
+        """
+        logger.info("DEBUG : innit search for furniture items...")
+        if not self.is_initialized or self.qdrant_client is None:
+            logger.warning("Search service: Qdrant not initialized. Cannot perform search.")
+            raise RuntimeError("Qdrant search service not initialized")
 
         if self.clip_service is None:
             logger.warning("Search service: CLIP service not initialized. Ensure LAMBDA_CLIP_URL is configured.")
@@ -216,7 +221,7 @@ class LambdaFurnitureSearcher:
             else:
                 image = image_input.convert('RGB')
 
-            # Generate embedding
+            # Generate embedding via Lambda CLIP
             logger.info("Generating CLIP embedding via Lambda CLIP")
             query_embedding = self.clip_service.get_image_embedding(image)
 
@@ -224,35 +229,37 @@ class LambdaFurnitureSearcher:
 
             query_embedding = _np.array(query_embedding, dtype=_np.float32)
             query_embedding = query_embedding / (_np.linalg.norm(query_embedding) + 1e-8)
+            query_embedding = query_embedding.tolist()
 
-            # Normalize dataset embeddings
-            dataset_embeddings_normalized = self.dataset_embeddings / (
-                _np.linalg.norm(self.dataset_embeddings, axis=1, keepdims=True) + 1e-8
+            # Search in Qdrant
+            logger.info("Searching Qdrant for similar furniture")
+            search_results = self.qdrant_client.query_points(
+                collection_name=Config.QDRANT_COLLECTION_NAME,
+                query=query_embedding,
+                limit=top_k,
+                with_payload=True
             )
 
-            similarity_scores = _np.dot(dataset_embeddings_normalized, query_embedding)
-
-            top_indices = _np.argsort(similarity_scores)[::-1][:top_k]
-
             results = []
-            for idx in top_indices:
+            for hit in search_results.points:
                 try:
-                    clean_id = self.df_embeddings.iloc[int(idx)]['clean_id']
-                    item = self.product_lookup.get(clean_id)
-                    score = float(similarity_scores[idx])
+                    payload = hit.payload or {}
+                    score = hit.score
 
-                    if item:
-                        search_query = f"{item.get('title', '')} {item.get('source', '')}"
-                        results.append({
-                            'score': score,
-                            'title': item.get('title', 'Unknown Item'),
-                            'price': str(item.get('price', 'N/A')),
-                            'source': item.get('source', ''),
-                            'image_url': item.get('image_url', ''),
-                            'search_query': search_query
-                        })
-                except Exception:
-                    logger.exception("Error retrieving item at index %s", idx)
+                    # Extract metadata from payload
+                    title = payload.get('title') or payload.get('name', 'Unknown Item')
+                    result_item = {
+                        'score': float(score),
+                        'title': title,
+                        'price': str(payload.get('price', 'N/A')),
+                        'source': payload.get('source', ''),
+                        'image_url': payload.get('image_url', ''),
+                        'search_query': f"{title} {payload.get('source', '')}"
+                    }
+                    results.append(result_item)
+
+                except Exception as e:
+                    logger.exception("Error processing search result: %s", str(e))
                     continue
 
             logger.info("Found %d results for furniture search", len(results))

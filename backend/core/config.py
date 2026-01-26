@@ -19,9 +19,13 @@ class Config:
     # Flask Configuration
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
     
+    # Qdrant Configuration
+    QDRANT_URL = os.getenv("QDRANT_URL")
+    QDRANT_URL = "https://d5be98a3-6f32-4734-a7bd-844bb4d15180.eu-central-1-0.aws.cloud.qdrant.io"
+    QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+    QDRANT_COLLECTION_NAME = "furniture_items"
+    
     # Search Service Configuration
-    CSV_FILE = os.path.join(PROJECT_ROOT, "google_dataset", "interior_design_dataset.csv")
-    EMBEDDINGS_FILE = os.path.join(PROJECT_ROOT, "google_dataset", "embeddings.pkl")
     MODEL_ID = "openai/clip-vit-base-patch32"
     
     # AI Service Configuration

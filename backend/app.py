@@ -30,16 +30,17 @@ def create_app():
     logger.info("Initializing AI service...")
     app.extensions['ai_service'] = GeminiService()
     
-    logger.info("Initializing search service (Lambda adapter)...")
+    logger.info("Initializing search service (Qdrant adapter)...")
     search_service = LambdaFurnitureSearcher()
     app.extensions['search_service'] = search_service
     
     # Validate search service initialization
-    if search_service.df_data is None:
+    if not search_service.is_initialized:
         logger.error("WARNING: Search service failed to initialize. Furniture search will not work.")
-        logger.error("Please ensure the following files exist and are readable:")
-        logger.error("  - %s", Config.CSV_FILE)
-        logger.error("  - %s", Config.EMBEDDINGS_FILE)
+        logger.error("Please ensure the following environment variables are set and correct:")
+        logger.error("  - QDRANT_URL")
+        logger.error("  - QDRANT_API_KEY")
+        logger.error("And that the Qdrant instance is accessible with the '%s' collection.", search_service.qdrant_client)
     else:
         logger.info("All services initialized successfully.")
 
