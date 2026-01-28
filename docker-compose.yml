@@ -19,11 +19,5 @@ services:
       - QDRANT_COLLECTION_NAME=furniture_items
       - LAMBDA_CLIP_URL=${LAMBDA_CLIP_URL}
     volumes:
-      # Mount dataset read-only so the image stays small but app can access data
-      - ./google_dataset:/app/google_dataset:ro
-      # Mount backend and templates for hot-reload style development
       - ./backend:/app/backend
       - ./templates:/app/templates
-      # Optionally mount .env if you use it for secrets/config
-      # (uncomment if desired)
-      # - ./.env:/app/.env:ro

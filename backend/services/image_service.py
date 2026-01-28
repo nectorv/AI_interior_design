@@ -1,7 +1,7 @@
 """Image processing service for handling image operations."""
 import io
 import logging
-from PIL import Image
+from PIL import Image, ImageOps
 from backend.utils.image_utils import decode_frontend_image
 
 logger = logging.getLogger(__name__)
@@ -18,21 +18,17 @@ def crop_image_from_data_uri(image_data_uri, crop_box):
         PIL Image object of the cropped region, or None if error
     """
     try:
-        # Convert Base64 to PIL Image
         img_bytes = decode_frontend_image(image_data_uri)
         if not img_bytes:
             return None
             
-        full_image = Image.open(io.BytesIO(img_bytes))
-        
-        # Crop the image based on user selection
-        x = int(crop_box['x'])
-        y = int(crop_box['y'])
-        w = int(crop_box['width'])
-        h = int(crop_box['height'])
-        
-        cropped_img = full_image.crop((x, y, x + w, y + h))
-        return cropped_img
+        with Image.open(io.BytesIO(img_bytes)) as full_image:
+            x, y = int(crop_box['x']), int(crop_box['y'])
+            w, h = int(crop_box['width']), int(crop_box['height'])
+            
+            cropped_img = full_image.crop((x, y, x + w, y + h))
+            #Letterboxing to 224x224 for model input
+            return ImageOps.pad(cropped_img, (224, 224), method=Image.Resampling.LANCZOS, color=(255, 255, 255))
         
     except Exception:
         logger.exception("Image cropping error")
