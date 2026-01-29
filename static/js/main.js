@@ -258,13 +258,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initialization ---
     Editor.initSlider(elements.comparisonBox, elements.overlay, elements.slider);
     
+    // Helper function to convert data URI to File object
+    function dataURItoFile(dataURI, fileName) {
+        const byteString = atob(dataURI.split(',')[1]);
+        const mimeString = dataURI.split(',')[0].match(/:(.*?);/)[1];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        return new File([ab], fileName, { type: mimeString });
+    }
+
     // Initialize Drawing logic with a callback for what to do when finished
     Editor.initDrawing(elements, async (backendBox) => {
         elements.resultsPanel.classList.remove('hidden');
         elements.resultsGrid.innerHTML = '<p style="text-align:center;">Searching...</p>';
         
         try {
-            const data = await API.searchFurniture(elements.finalImg.src, backendBox);
+            // Convert data URI to File object
+            const imageFile = dataURItoFile(elements.finalImg.src, 'search-image.jpg');
+            const data = await API.searchFurniture(imageFile, backendBox);
             UI.renderSearchResults(data.results, elements.resultsGrid);
         } catch (err) {
             elements.resultsGrid.innerHTML = '<p>Error searching.</p>';

@@ -153,51 +153,61 @@ def refine_image():
 def search_furniture():
     """Endpoint for searching furniture based on image crop.
     
-    Expects JSON:
-        - image_data: Base64 data URI of the full image
-        - box: Dictionary with x, y, width, height for crop region
+    Expects multipart/form-data:
+        - image: Image file to search within
+        - box_x, box_y, box_width, box_height: Crop region coordinates
     
     Returns:
         JSON with results array containing matching furniture items
     """
-    data = request.get_json(silent=True) or {}
+    # Validate image file
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded'}), 400
 
-    image_data = data.get('image_data')  # Base64 string of the generated image
-    crop_box = data.get('box')  # {x, y, width, height}
+    file = request.files['image']
+    if not file or file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
 
-    if not image_data or not crop_box:
-        return jsonify({'error': 'Missing data'}), 400
+    # Validate crop box parameters
+    try:
+        box_x = float(request.form.get('box_x', 0))
+        box_y = float(request.form.get('box_y', 0))
+        box_width = float(request.form.get('box_width'))
+        box_height = float(request.form.get('box_height'))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid crop box values'}), 400
 
-    required_keys = {'x', 'y', 'width', 'height'}
-    if not required_keys.issubset(crop_box):
-        return jsonify({'error': 'Invalid crop box'}), 400
+    if box_width <= 0 or box_height <= 0:
+        return jsonify({'error': 'Crop dimensions must be positive'}), 400
 
     try:
-        # Normalize and validate crop values
-        # Handle None values and ensure all values are valid numbers
-        x = crop_box.get('x')
-        y = crop_box.get('y')
-        width = crop_box.get('width')
-        height = crop_box.get('height')
+        # Read image file bytes
+        image_bytes = file.read()
+        if not image_bytes:
+            return jsonify({'error': 'Empty file'}), 400
+
+        # Validate file content by detecting actual image format
+        detected_mime_type = detect_image_mime_type(image_bytes)
+        allowed_mimetypes = {'image/jpeg', 'image/png', 'image/webp'}
         
-        if x is None or y is None or width is None or height is None:
-            return jsonify({'error': 'Missing crop box coordinates'}), 400
-        
-        try:
-            parsed_box = {
-                'x': float(x),
-                'y': float(y),
-                'width': float(width),
-                'height': float(height)
-            }
-        except (ValueError, TypeError) as e:
-            return jsonify({'error': f'Invalid crop box values: {str(e)}'}), 400
-            
-        if parsed_box['width'] <= 0 or parsed_box['height'] <= 0:
-            return jsonify({'error': 'Crop dimensions must be positive'}), 400
+        if detected_mime_type not in allowed_mimetypes:
+            return jsonify({'error': f'Unsupported file type. Detected: {detected_mime_type}. Supported: JPEG, PNG, WebP'}), 400
 
         # Crop the image based on user selection
-        cropped_img = crop_image_from_data_uri(image_data, parsed_box)
+        from PIL import Image as PILImage
+        import io
+        from PIL import ImageOps
+        
+        with PILImage.open(io.BytesIO(image_bytes)) as full_image:
+            crop_region = (
+                int(box_x),
+                int(box_y),
+                int(box_x + box_width),
+                int(box_y + box_height)
+            )
+            cropped_img = full_image.crop(crop_region)
+            # Letterboxing to 224x224 for model input
+            cropped_img = ImageOps.pad(cropped_img, (224, 224), method=PILImage.Resampling.LANCZOS, color=(255, 255, 255))
 
         if not cropped_img:
             return jsonify({'error': 'Failed to process image'}), 400

@@ -23,11 +23,17 @@ export async function refineImage(imageData, prompt) {
     return handleResponse(response);
 }
 
-export async function searchFurniture(imageData, box) {
+export async function searchFurniture(file, box) {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('box_x', box.x);
+    formData.append('box_y', box.y);
+    formData.append('box_width', box.width);
+    formData.append('box_height', box.height);
+
     const response = await fetch('/api/search-furniture', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_data: imageData, box: box })
+        body: formData
     });
     return handleResponse(response);
 }
