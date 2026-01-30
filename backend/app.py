@@ -5,7 +5,7 @@ from flask import Flask
 from backend.core.config import Config
 from backend.api.routes import api_bp
 from backend.services.ai_service import GeminiService
-from backend.services.lambda_search_service import LambdaFurnitureSearcher
+from backend.services.qdrant_service import QdrantService
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def create_app():
     app.extensions['ai_service'] = GeminiService()
     
     logger.info("Initializing search service (Qdrant adapter)...")
-    search_service = LambdaFurnitureSearcher()
+    search_service = QdrantService()
     app.extensions['search_service'] = search_service
     
     # Validate search service initialization

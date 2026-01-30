@@ -30,18 +30,6 @@ The live demo features a Qdrant vector database with a custom dataset of over 65
 - Docker
 - Google Gemini API Key
 
-### Environment Variables
-
-Create a `.env` file with the following variables:
-
-```bash
-GOOGLE_API_KEY=your-google-gemini-api-key
-QDRANT_URL=http://localhost:6333  # Optional
-QDRANT_API_KEY=your-qdrant-api-key  # Optional
-QDRANT_COLLECTION_NAME=furniture_items
-FLASK_ENV=development
-```
-
 ### Installation
 
 ```bash
@@ -80,11 +68,11 @@ The application is ready to be deployed with AWS App Runner:
 
 1. Connect your ECR repository to App Runner
 2. Set environment variables in the App Runner configuration
-3. Deploy with automatic scaling and health checks
+3. Deploy
 
 ## 🎯 Future Enhancements
 
-- [ ] User authentication and design history
+- [ ] User authentication
 - [ ] Design sharing and collaboration
 - [ ] Mobile app (iOS/Android)
 - [ ] Multi-room project support
