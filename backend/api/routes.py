@@ -160,7 +160,7 @@ def search_furniture():
     Returns:
         JSON with results array containing matching furniture items
     """
-    # Validate image file
+    # Validate image format
     if 'image' not in request.files:
         return jsonify({'error': 'No image uploaded'}), 400
 
@@ -206,8 +206,6 @@ def search_furniture():
                 int(box_y + box_height)
             )
             cropped_img = full_image.crop(crop_region)
-            # Letterboxing to 224x224 for model input
-            cropped_img = ImageOps.pad(cropped_img, (224, 224), method=PILImage.Resampling.LANCZOS, color=(255, 255, 255))
 
         if not cropped_img:
             return jsonify({'error': 'Failed to process image'}), 400

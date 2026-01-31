@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Helper function to restore image state (used by both undo and redo)
+    // Helper function to restore image state
     function restoreImageState(state) {
         if (!state) return;
         

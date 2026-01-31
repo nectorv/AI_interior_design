@@ -1,0 +1,53 @@
+name : test-and-deploy
+
+on :
+  push :
+    branches :
+      - main
+
+permissions :
+  id-token : write
+  contents : read
+  
+jobs :
+  build-and-deploy :
+    runs-on : ubuntu-latest
+
+    steps :
+      - name : Checkout repository
+        uses : actions/checkout@v3
+
+      - name: Debug OIDC Token
+        run: echo "ID Token is present" [[ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]] && echo "YES" || echo "NO"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-central-1
+          role-session-name: GitHubActionsSession
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Test AWS Identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy to App Runner
+        uses: awslabs/amazon-app-runner-deploy@main
+        with:
+          service: ai-interior-designer-frontend
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_NAME }}:${{ github.sha }}
+          region: eu-central-1
+          access-role-arn: ${{ secrets.APP_RUNNER_ACCESS_ROLE_ARN }}
+          port: 5000

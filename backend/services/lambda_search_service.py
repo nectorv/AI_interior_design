@@ -25,7 +25,7 @@ class LambdaCLIPService:
         self.timeout = timeout
         # warm control
         self._last_warm = 0.0
-        self._warm_interval = 20  # 20 seconds default
+        self._warm_interval = 20  # 20 seconds
         if not self.url:
             logger.warning("Lambda CLIP URL not configured; LambdaCLIPService will be disabled")
 
