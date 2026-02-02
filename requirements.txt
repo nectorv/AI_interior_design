@@ -4,3 +4,6 @@ python-dotenv
 Flask
 numpy
 qdrant-client
+pytest
+pytest-cov
+pre-commit

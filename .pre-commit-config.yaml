@@ -1,0 +1,19 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest
+        entry: pytest tests/
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+      - id: pytest-cov
+        name: pytest coverage
+        entry: pytest tests/ --cov=backend --cov-fail-under=70
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
