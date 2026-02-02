@@ -73,4 +73,3 @@ def decode_frontend_image(uri):
     except Exception:
         logger.exception("Decoding error")
         return None
-
