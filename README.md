@@ -18,6 +18,7 @@ The live demo features a Qdrant vector database with a custom dataset of over 65
 - **Pillow** - Image processing
 - **Qdrant** - Vector database for furniture search
 - **Docker** - Containerization
+- **Github Action** - CI/CD
 
 ### Frontend
 - **HTML/CSS/JavaScript** - Vanilla JavaScript (no framework)
