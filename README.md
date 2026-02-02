@@ -53,10 +53,17 @@ AI_interior_design/
 │   ├── core/             # Configuration and prompts
 │   ├── services/         # AI and image services
 │   └── utils/            # Image processing utilities
+├── tests/                # Test suite
+│   ├── api/              # API endpoint tests
+│   ├── core/             # Core configuration tests
+│   ├── services/         # Service layer tests
+│   └── utils/            # Utility function tests
 ├── templates/            # HTML templates
 ├── static/
 │   ├── css/              # Styling
 │   └── js/               # Frontend JavaScript
+├── .github/
+│   └── workflows/        # CI/CD pipelines
 ├── Dockerfile            # Container configuration
 ├── docker-compose.yml    # Multi-container setup
 ├── requirements.txt      # Python dependencies
