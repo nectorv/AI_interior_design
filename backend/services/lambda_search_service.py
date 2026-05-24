@@ -223,6 +223,7 @@ class LambdaFurnitureSearcher:
             search_results = self.qdrant_client.query_points(
                 collection_name=Config.QDRANT_COLLECTION_NAME,
                 query=query_embedding,
+                using="clip_finetuned",
                 limit=top_k,
                 with_payload=True
             )
