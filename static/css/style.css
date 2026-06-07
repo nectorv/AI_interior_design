@@ -151,6 +151,25 @@ body {
     transform: translateY(-2px);
 }
 
+.try-sample-btn {
+    pointer-events: auto;
+    display: block;
+    margin: 0.75rem auto 0;
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+}
+
+.try-sample-btn:hover {
+    opacity: 1;
+}
+
 /* =========================================
    COMPARISON SLIDER (FIXED)
    ========================================= */

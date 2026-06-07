@@ -481,6 +481,22 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(selectedFile);
     }
     
+    // Sample image loader
+    const trySampleBtn = document.getElementById('try-sample-btn');
+    if (trySampleBtn) {
+        trySampleBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            try {
+                const response = await fetch('/static/assets/sample-room.jpg');
+                const blob = await response.blob();
+                const file = new File([blob], 'sample-room.jpg', { type: 'image/jpeg' });
+                handleFileSelect(file);
+            } catch (err) {
+                console.error('Failed to load sample image', err);
+            }
+        });
+    }
+
     // Show upload button only when needed
     if (uploadBtnTrigger) {
         // Initially hidden, will show after result is generated
