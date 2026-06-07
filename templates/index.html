@@ -45,7 +45,10 @@
 
                 <div id="initial-view" class="initial-view">
                     <p>Click or Drag to Upload Room Photo</p>
-                    <button id="try-sample-btn" class="try-sample-btn">or try with a sample image</button>
+                    <button id="try-sample-btn" class="try-sample-btn">
+                        <img src="{{ url_for('static', filename='assets/sample-room.jpg') }}" alt="Sample room">
+                        Try with a sample image
+                    </button>
                 </div>
 
                 <div id="result-view" class="comparison-wrapper hidden"> 
